@@ -107,43 +107,15 @@
 </div>
 
 <script>
-  const scriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec";
+  // CONFIGURATION CONSTANTS
+  const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec"; 
+  const firebaseDbUrl = "https://SittingUpdateSystem-default-rtdb.firebaseio.com/users.json";
 
-  let globalUserData = null;
+  let allUsersCache = null;
+  let activeUserRecord = null;
   let selectedName = "";
 
-  function jsonpFetch(url, params, callbackName, successHandler, errorHandler) {
-    const urlParams = new URLSearchParams(params);
-    urlParams.append('callback', callbackName);
-    
-    const script = document.createElement('script');
-    script.src = `${url}?${urlParams.toString()}`;
-    
-    window[callbackName] = function(data) {
-      delete window[callbackName];
-      document.body.removeChild(script);
-      if (data && data.error) {
-        if(errorHandler) errorHandler(data.error);
-      } else {
-        successHandler(data);
-      }
-    };
-    
-    script.onerror = function() {
-      if(window[callbackName]) delete window[window[callbackName]];
-      if(document.body.contains(script)) document.body.removeChild(script);
-      if(errorHandler) errorHandler("Network connection timeout or error.");
-    };
-    
-    document.body.appendChild(script);
-  }
-
-  // Safely assign click events inside the loaded context
   window.addEventListener('DOMContentLoaded', () => {
-    // Warmup ping
-    jsonpFetch(scriptUrl, { action: "ping" }, "cbPing", () => {}, () => {});
-
-    // Bind UI actions
     document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
     document.getElementById('loginBtn').addEventListener('click', processLogin);
     document.getElementById('changePassBtn').addEventListener('click', openPasswordModal);
@@ -153,67 +125,89 @@
     document.getElementById('logoutBtn').addEventListener('click', logout);
   });
 
-  function executeSearch() {
-    let query = document.getElementById('nameInput').value;
+  async function fetchFirebaseData() {
+    if (allUsersCache) return allUsersCache;
+    try {
+      const response = await fetch(firebaseDbUrl);
+      allUsersCache = await response.json();
+      return allUsersCache;
+    } catch (err) {
+      console.error("Firebase fetch error:", err);
+      return null;
+    }
+  }
+
+  async function executeSearch() {
+    let query = document.getElementById('nameInput').value.trim().toLowerCase();
     let suggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
     
     suggBox.innerHTML = "";
     suggBox.style.display = "none";
-    msgDiv.innerText = "Searching database...";
-    msgDiv.className = "status-msg";
     
     if (query.length < 3) {
       alert("Please type at least 3 characters to search.");
       return;
     }
     
-    jsonpFetch(scriptUrl, { action: "search", query: query }, "cbSearch", function(response) {
-      msgDiv.innerText = "";
-      if(response.data && response.data.length > 0) {
+    msgDiv.innerText = "Searching local database...";
+    msgDiv.className = "status-msg";
+
+    let database = await fetchFirebaseData();
+    if (!database) {
+      msgDiv.innerText = "Network database error. Please refresh.";
+      msgDiv.className = "status-msg error";
+      return;
+    }
+
+    msgDiv.innerText = "";
+    let matchesFound = false;
+
+    Object.keys(database).forEach(key => {
+      let user = database[key];
+      if (user.name && user.name.toLowerCase().indexOf(query) !== -1) {
+        matchesFound = true;
         suggBox.style.display = "block";
-        response.data.forEach(name => {
-          let div = document.createElement('div');
-          div.className = 'suggestion-item';
-          div.innerText = name;
-          div.onclick = function() {
-            document.getElementById('nameInput').value = name;
-            selectedName = name;
-            suggBox.innerHTML = "";
-            suggBox.style.display = "none";
-            document.getElementById('passwordGroup').style.display = 'block';
-            document.getElementById('changePassBtn').style.display = 'block'; 
-            document.getElementById('loginBtn').style.display = 'block';
-          };
-          suggBox.appendChild(div);
-        });
-      } else {
-        msgDiv.innerText = "No matching names found.";
-        msgDiv.className = "status-msg error";
+        let div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.innerText = user.name;
+        div.onclick = function() {
+          document.getElementById('nameInput').value = user.name;
+          selectedName = user.name;
+          activeUserRecord = user; 
+          suggBox.innerHTML = "";
+          suggBox.style.display = "none";
+          document.getElementById('passwordGroup').style.display = 'block';
+          document.getElementById('changePassBtn').style.display = 'block'; 
+          document.getElementById('loginBtn').style.display = 'block';
+        };
+        suggBox.appendChild(div);
       }
-    }, function(err) {
-      msgDiv.innerText = "Error: " + err;
     });
+
+    if (!matchesFound) {
+      msgDiv.innerText = "No matching profiles found.";
+      msgDiv.className = "status-msg error";
+    }
   }
 
   function processLogin() {
-    let password = document.getElementById('passwordInput').value;
+    let inputPassword = document.getElementById('passwordInput').value.trim();
     let msgDiv = document.getElementById('loginMessage');
-    msgDiv.innerText = "Verifying password...";
-    msgDiv.className = "status-msg";
     
-    jsonpFetch(scriptUrl, { action: "login", name: selectedName, password: password }, "cbLogin", function(response) {
-      if (response.success) {
-        msgDiv.innerText = "";
-        globalUserData = response;
-        buildDashboard();
-      } else {
-        msgDiv.innerText = response.message;
-        msgDiv.className = "status-msg error";
-      }
-    }, function(err) {
-      msgDiv.innerText = "Verification error: " + err;
-    });
+    if (!activeUserRecord) {
+      msgDiv.innerText = "Please select a verified name first.";
+      msgDiv.className = "status-msg error";
+      return;
+    }
+
+    if (activeUserRecord.password === inputPassword) {
+      msgDiv.innerText = "";
+      buildDashboard();
+    } else {
+      msgDiv.innerText = "Incorrect security password.";
+      msgDiv.className = "status-msg error";
+    }
   }
 
   function openPasswordModal() {
@@ -228,37 +222,56 @@
     document.getElementById('passwordModal').style.display = "none";
   }
 
-  function submitPasswordChange() {
-    let oldPass = document.getElementById('modalOldPass').value;
-    let newPass = document.getElementById('modalNewPass').value;
+  async function submitPasswordChange() {
+    let oldPass = document.getElementById('modalOldPass').value.trim();
+    let newPass = document.getElementById('modalNewPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
     if(!oldPass || !newPass) {
-      errorDiv.innerText = "Please fill in both password fields.";
+      errorDiv.innerText = "Please complete all password rows.";
       errorDiv.className = "status-msg error";
       return;
     }
     if(newPass.length !== 6) {
-      errorDiv.innerText = "New password must be exactly 6 characters.";
+      errorDiv.innerText = "Password structural layout must be exactly 6 characters.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    if(oldPass !== activeUserRecord.password) {
+      errorDiv.innerText = "Current verified password incorrect.";
       errorDiv.className = "status-msg error";
       return;
     }
     
-    errorDiv.innerText = "Processing configuration update...";
+    errorDiv.innerText = "Syncing across infrastructure nodes...";
     errorDiv.className = "status-msg";
-    
-    let executionRow = globalUserData ? globalUserData.rowNumber : 2;
-    let payload = JSON.stringify({oldPassword: oldPass, newPassword: newPass});
 
-    jsonpFetch(scriptUrl, { action: "updatePassword", rowNumber: executionRow, payload: payload }, "cbPass", function(response) {
-      errorDiv.innerText = "Password changed successfully!";
-      errorDiv.className = "status-msg";
+    activeUserRecord.password = newPass;
+    let nodeKey = "row_" + activeUserRecord.rowNumber;
+    let patchUrl = `https://${firebaseDbUrl.split('/')[2]}/users/${nodeKey}.json`;
+
+    try {
+      // 1. Instant Firebase Save
+      await fetch(patchUrl, {
+        method: "PATCH",
+        body: JSON.stringify({ password: newPass })
+      });
+
+      // 2. Background Sheet Sync
+      fetch(googleScriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: newPass } })
+      });
+
+      errorDiv.innerText = "Security records updated successfully!";
       document.getElementById('passwordInput').value = newPass;
-      setTimeout(() => { closePasswordModal(); }, 1500);
-    }, function(err) {
-      errorDiv.innerText = err;
+      setTimeout(() => { closePasswordModal(); }, 1200);
+    } catch(e) {
+      errorDiv.innerText = "Sync conflict detected.";
       errorDiv.className = "status-msg error";
-    });
+    }
   }
 
   function buildDashboard() {
@@ -271,17 +284,12 @@
     readOnlyGrid.innerHTML = "";
     datesGrid.innerHTML = "";
     
-    let rowValues = globalUserData.rowData;
-    let headers = globalUserData.headers;
+    let rowValues = activeUserRecord.rowData;
+    let headers = activeUserRecord.headers;
 
     for (let i = 0; i < 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
-      
-      if(rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
-         let d = new Date(rawVal);
-         if(!isNaN(d)) rawVal = d.toISOString().split('T')[0];
-      }
 
       if (i >= 3 && i <= 14) { 
         let div = document.createElement('div');
@@ -297,9 +305,9 @@
     }
   }
 
-  function submitDates() {
+  async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
-    statusSpan.innerText = "Saving data...";
+    statusSpan.innerText = "Writing instant records...";
     statusSpan.className = "status-msg";
     
     let dateInputs = document.getElementsByClassName('date-input');
@@ -307,17 +315,40 @@
     for (let i = 0; i < dateInputs.length; i++) {
       updatedDatesPayload.push(dateInputs[i].value);
     }
+
+    // Apply mutation locally first
+    for(let i=0; i<updatedDatesPayload.length; i++) {
+       activeUserRecord.rowData[i+3] = updatedDatesPayload[i];
+    }
     
-    jsonpFetch(scriptUrl, { action: "updateDates", rowNumber: globalUserData.rowNumber, payload: JSON.stringify(updatedDatesPayload) }, "cbDates", function(response) {
-      statusSpan.innerText = response.message;
-      setTimeout(() => { statusSpan.innerText = ""; }, 4000);
-    }, function(err) {
-      statusSpan.innerText = "Error saving: " + err;
-    });
+    let nodeKey = "row_" + activeUserRecord.rowNumber;
+    let patchUrl = `https://${firebaseDbUrl.split('/')[2]}/users/${nodeKey}.json`;
+
+    try {
+      // 1. Direct Firebase Save (Near 0ms delay)
+      await fetch(patchUrl, {
+        method: "PATCH",
+        body: JSON.stringify({ rowData: activeUserRecord.rowData })
+      });
+
+      // 2. Async Master Google Sheet Pipeline Update
+      fetch(googleScriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
+      });
+
+      statusSpan.innerText = "System entries committed to database successfully!";
+      setTimeout(() => { statusSpan.innerText = ""; }, 3000);
+    } catch(err) {
+      statusSpan.innerText = "Database sync failed.";
+      statusSpan.className = "status-msg error";
+    }
   }
 
   function logout() {
-    globalUserData = null;
+    activeUserRecord = null;
     selectedName = "";
     document.getElementById('nameInput').value = "";
     document.getElementById('passwordInput').value = "";
