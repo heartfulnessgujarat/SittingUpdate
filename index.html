@@ -12,7 +12,7 @@
     .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
     h2 { color: #1a73e8; margin: 0; }
     
-    /* Clean Link Styling - No block backgrounds on hover */
+    /* Fixed Link Hover State - Perfectly transparent text link style */
     .btn-link { background: transparent !important; border: none !important; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 4px 0; transition: color 0.15s ease; outline: none; }
     .btn-link:hover, .btn-link:focus, .btn-link:active { color: #1557b0 !important; text-decoration: underline !important; background: transparent !important; background-color: transparent !important; }
 
@@ -263,4 +263,62 @@
     readOnlyGrid.innerHTML = "";
     datesGrid.innerHTML = "";
     
-    let rowValues = globalUserData.rowData
+    let rowValues = globalUserData.rowData;
+    let headers = globalUserData.headers;
+
+    for (let i = 0; i < 15; i++) {
+      let rawVal = rowValues[i] ? rowValues[i] : "";
+      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
+      
+      if(rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
+         let d = new Date(rawVal);
+         if(!isNaN(d)) rawVal = d.toISOString().split('T')[0];
+      }
+
+      if (i >= 3 && i <= 14) { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" value="${rawVal}">`;
+        datesGrid.appendChild(div);
+      } else { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
+        readOnlyGrid.appendChild(div);
+      }
+    }
+  }
+
+  function submitDates() {
+    let statusSpan = document.getElementById('saveStatus');
+    statusSpan.innerText = "Saving data...";
+    statusSpan.className = "status-msg";
+    
+    let dateInputs = document.getElementsByClassName('date-input');
+    let updatedDatesPayload = [];
+    for (let i = 0; i < dateInputs.length; i++) {
+      updatedDatesPayload.push(dateInputs[i].value);
+    }
+    
+    jsonpFetch(scriptUrl, { action: "updateDates", rowNumber: globalUserData.rowNumber, payload: JSON.stringify(updatedDatesPayload) }, "cbDates", function(response) {
+      statusSpan.innerText = response.message;
+      setTimeout(() => { statusSpan.innerText = ""; }, 4000);
+    }, function(err) {
+      statusSpan.innerText = "Error saving: " + err;
+    });
+  }
+
+  function logout() {
+    globalUserData = null;
+    selectedName = "";
+    document.getElementById('nameInput').value = "";
+    document.getElementById('passwordInput').value = "";
+    document.getElementById('passwordGroup').style.display = 'none';
+    document.getElementById('changePassBtn').style.display = 'none';
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+  }
+</script>
+</body>
+</html>
