@@ -8,11 +8,13 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 700px; background: white; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    /* Layout Header Adjustment */
+    /* Elegant Header Layout */
     .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
     h2 { color: #1a73e8; margin: 0; }
-    .btn-link { background: none; border: none; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; }
-    .btn-link:hover { color: #1557b0; }
+    
+    /* Fixed Link Hover State - No background blocks */
+    .btn-link { background: transparent !important; border: none !important; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 4px 0; transition: color 0.15s ease; outline: none; }
+    .btn-link:hover, .btn-link:focus, .btn-link:active { color: #1557b0 !important; text-decoration: underline !important; background: transparent !important; background-color: transparent !important; }
 
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
@@ -112,6 +114,7 @@
   let globalUserData = null;
   let selectedName = "";
 
+  // Proactive warmup protocol to fire async handshakes
   function jsonpFetch(url, params, callbackName, successHandler, errorHandler) {
     const urlParams = new URLSearchParams(params);
     urlParams.append('callback', callbackName);
@@ -130,13 +133,18 @@
     };
     
     script.onerror = function() {
-      if(window[callbackName]) delete window[callbackName];
+      if(window[callbackName]) delete window[window[callbackName]];
       if(document.body.contains(script)) document.body.removeChild(script);
       if(errorHandler) errorHandler("Network connection timeout or error.");
     };
     
     document.body.appendChild(script);
   }
+
+  // Instant preemptive initialization call
+  window.addEventListener('DOMContentLoaded', () => {
+    jsonpFetch(scriptUrl, { action: "ping" }, "cbPing", () => {}, () => {});
+  });
 
   function executeSearch() {
     let query = document.getElementById('nameInput').value;
@@ -239,7 +247,7 @@
       errorDiv.innerText = "Password changed successfully!";
       errorDiv.className = "status-msg";
       document.getElementById('passwordInput').value = newPass;
-      setTimeout(() => { closePasswordModal(); }, 2000);
+      setTimeout(() => { closePasswordModal(); }, 1500);
     }, function(err) {
       errorDiv.innerText = err;
       errorDiv.className = "status-msg error";
@@ -297,21 +305,3 @@
       statusSpan.innerText = response.message;
       setTimeout(() => { statusSpan.innerText = ""; }, 4000);
     }, function(err) {
-      statusSpan.innerText = "Error saving: " + err;
-    });
-  }
-
-  function logout() {
-    globalUserData = null;
-    selectedName = "";
-    document.getElementById('nameInput').value = "";
-    document.getElementById('passwordInput').value = "";
-    document.getElementById('passwordGroup').style.display = 'none';
-    document.getElementById('changePassBtn').style.display = 'none';
-    document.getElementById('loginBtn').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('loginSection').style.display = 'block';
-  }
-</script>
-</body>
-</html>
