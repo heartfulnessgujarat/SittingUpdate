@@ -7,22 +7,29 @@
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 700px; background: white; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h2 { color: #1a73e8; margin-top: 0; }
+    
+    /* Layout Header Adjustment */
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+    h2 { color: #1a73e8; margin: 0; }
+    .btn-link { background: none; border: none; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; }
+    .btn-link:hover { color: #1557b0; }
+
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
     input[type="text"], input[type="password"], input[type="date"] { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; }
     input:focus { border-color: #1a73e8; outline: none; }
+    
     .search-wrapper { display: flex; gap: 10px; }
     .search-wrapper input { flex: 1; }
     .suggestions { max-height: 200px; overflow-y: auto; background: #f8f9fa; border: 1px solid #dadce0; margin-top: 5px; border-radius: 4px; display: none; }
     .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
     .suggestion-item:hover { background-color: #e8eaed; color: #1a73e8; }
-    .password-wrapper { display: flex; gap: 10px; }
-    .password-wrapper input { flex: 1; }
+    
     button { background-color: #1a73e8; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
     button:hover { background-color: #1557b0; }
     .btn-secondary { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
     .btn-secondary:hover { background-color: #e8eaed; }
+    
     .dashboard { display: none; }
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
@@ -30,6 +37,7 @@
     .grid-item strong { word-break: break-all; font-size: 15px; color: #202124; }
     .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; }
     .error { color: #d93025; }
+    
     .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
     .modal-box { background: white; padding: 25px; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     .modal-box h3 { margin-top: 0; color: #202124; }
@@ -40,8 +48,11 @@
 
 <div class="container">
   <div id="loginSection">
-    <h2>User Login</h2>
-    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-bottom: 20px;">
+    <div class="header-row">
+      <h2>User Login</h2>
+      <button id="changePassBtn" class="btn-link" type="button" onclick="openPasswordModal()" style="display:none;">Change Password</button>
+    </div>
+    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
     
     <div class="form-group">
       <label for="nameInput">Type Three letters of your name and click on 'Search' button</label>
@@ -54,10 +65,7 @@
     
     <div class="form-group" id="passwordGroup" style="display:none;">
       <label for="passwordInput">Enter Password</label>
-      <div class="password-wrapper">
-        <input type="password" id="passwordInput" placeholder="6-character password">
-        <button id="changePassBtn" class="btn-secondary" type="button" onclick="openPasswordModal()">Change Password</button>
-      </div>
+      <input type="password" id="passwordInput" placeholder="6-character password">
     </div>
     
     <button id="loginBtn" style="display:none; margin-top: 10px;" onclick="processLogin()">Access My Data</button>
@@ -104,6 +112,7 @@
   let globalUserData = null;
   let selectedName = "";
 
+  // Performance-optimized transport mechanism
   function jsonpFetch(url, params, callbackName, successHandler, errorHandler) {
     const urlParams = new URLSearchParams(params);
     urlParams.append('callback', callbackName);
@@ -112,7 +121,7 @@
     script.src = `${url}?${urlParams.toString()}`;
     
     window[callbackName] = function(data) {
-      delete window[window[callbackName]];
+      delete window[callbackName];
       document.body.removeChild(script);
       if (data && data.error) {
         if(errorHandler) errorHandler(data.error);
@@ -132,7 +141,7 @@
 
   function executeSearch() {
     let query = document.getElementById('nameInput').value;
-    let suggBox = document.getElementById('suggestions');
+    let ]suggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
     
     suggBox.innerHTML = "";
@@ -159,150 +168,5 @@
             suggBox.innerHTML = "";
             suggBox.style.display = "none";
             document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('changePassBtn').style.display = 'block'; // Shows link at top when user is active
             document.getElementById('loginBtn').style.display = 'block';
-          };
-          suggBox.appendChild(div);
-        });
-      } else {
-        msgDiv.innerText = "No matching names found.";
-        msgDiv.className = "status-msg error";
-      }
-    }, function(err) {
-      msgDiv.innerText = "Error: " + err;
-    });
-  }
-
-  function processLogin() {
-    let password = document.getElementById('passwordInput').value;
-    let msgDiv = document.getElementById('loginMessage');
-    msgDiv.innerText = "Verifying password...";
-    msgDiv.className = "status-msg";
-    
-    jsonpFetch(scriptUrl, { action: "login", name: selectedName, password: password }, "cbLogin", function(response) {
-      if (response.success) {
-        msgDiv.innerText = "";
-        globalUserData = response;
-        buildDashboard();
-      } else {
-        msgDiv.innerText = response.message;
-        msgDiv.className = "status-msg error";
-      }
-    }, function(err) {
-      msgDiv.innerText = "Verification error: " + err;
-    });
-  }
-
-  function openPasswordModal() {
-    document.getElementById('modalOldPass').value = "";
-    document.getElementById('modalNewPass').value = "";
-    document.getElementById('modalError').innerText = "";
-    document.getElementById('modalError').className = "status-msg";
-    document.getElementById('passwordModal').style.display = "flex";
-  }
-  
-  function closePasswordModal() {
-    document.getElementById('passwordModal').style.display = "none";
-  }
-
-  function submitPasswordChange() {
-    let oldPass = document.getElementById('modalOldPass').value;
-    let newPass = document.getElementById('modalNewPass').value;
-    let errorDiv = document.getElementById('modalError');
-    
-    if(!oldPass || !newPass) {
-      errorDiv.innerText = "Please fill in both password fields.";
-      errorDiv.className = "status-msg error";
-      return;
-    }
-    if(newPass.length !== 6) {
-      errorDiv.innerText = "New password must be exactly 6 characters.";
-      errorDiv.className = "status-msg error";
-      return;
-    }
-    
-    errorDiv.innerText = "Processing configuration update...";
-    errorDiv.className = "status-msg";
-    
-    let executionRow = globalUserData ? globalUserData.rowNumber : 2;
-    let payload = JSON.stringify({oldPassword: oldPass, newPassword: newPass});
-
-    jsonpFetch(scriptUrl, { action: "updatePassword", rowNumber: executionRow, payload: payload }, "cbPass", function(response) {
-      errorDiv.innerText = "Password changed successfully!";
-      errorDiv.className = "status-msg"; // Simple, clean text indicator inside modal
-      document.getElementById('passwordInput').value = newPass;
-      setTimeout(() => { closePasswordModal(); }, 2000);
-    }, function(err) {
-      errorDiv.innerText = err;
-      errorDiv.className = "status-msg error";
-    });
-  }
-
-  function buildDashboard() {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'block';
-    document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
-    
-    let readOnlyGrid = document.getElementById('readOnlyGrid');
-    let datesGrid = document.getElementById('datesGrid');
-    readOnlyGrid.innerHTML = "";
-    datesGrid.innerHTML = "";
-    
-    let rowValues = globalUserData.rowData;
-    let headers = globalUserData.headers;
-
-    // Strict boundary optimization: Run only up to index 14 (Column O) to hide P, Q, R, S
-    for (let i = 0; i < 15; i++) {
-      let rawVal = rowValues[i] ? rowValues[i] : "";
-      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
-      
-      if(rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
-         let d = new Date(rawVal);
-         if(!isNaN(d)) rawVal = d.toISOString().split('T')[0];
-      }
-
-      if (i >= 3 && i <= 14) { 
-        let div = document.createElement('div');
-        div.className = 'grid-item';
-        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" value="${rawVal}">`;
-        datesGrid.appendChild(div);
-      } else { 
-        let div = document.createElement('div');
-        div.className = 'grid-item';
-        div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
-        readOnlyGrid.appendChild(div);
-      }
-    }
-  }
-
-  function submitDates() {
-    let statusSpan = document.getElementById('saveStatus');
-    statusSpan.innerText = "Saving data...";
-    statusSpan.className = "status-msg";
-    
-    let dateInputs = document.getElementsByClassName('date-input');
-    let updatedDatesPayload = [];
-    for (let i = 0; i < dateInputs.length; i++) {
-      updatedDatesPayload.push(dateInputs[i].value);
-    }
-    
-    jsonpFetch(scriptUrl, { action: "updateDates", rowNumber: globalUserData.rowNumber, payload: JSON.stringify(updatedDatesPayload) }, "cbDates", function(response) {
-      statusSpan.innerText = response.message;
-      setTimeout(() => { statusSpan.innerText = ""; }, 4000);
-    }, function(err) {
-      statusSpan.innerText = "Error saving: " + err;
-    });
-  }
-
-  function logout() {
-    globalUserData = null;
-    selectedName = "";
-    document.getElementById('nameInput').value = "";
-    document.getElementById('passwordInput').value = "";
-    document.getElementById('passwordGroup').style.display = 'none';
-    document.getElementById('loginBtn').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('loginSection').style.display = 'block';
-  }
-</script>
-</body>
-</html>
