@@ -8,11 +8,9 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 700px; background: white; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    /* Elegant Header Layout */
     .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
     h2 { color: #1a73e8; margin: 0; }
     
-    /* Fixed Link Hover State - Perfectly transparent text link style */
     .btn-link { background: transparent !important; border: none !important; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 4px 0; transition: color 0.15s ease; outline: none; }
     .btn-link:hover, .btn-link:focus, .btn-link:active { color: #1557b0 !important; text-decoration: underline !important; background: transparent !important; background-color: transparent !important; }
 
@@ -52,7 +50,7 @@
   <div id="loginSection">
     <div class="header-row">
       <h2>User Login</h2>
-      <button id="changePassBtn" class="btn-link" type="button" onclick="openPasswordModal()" style="display:none;">Change Password</button>
+      <button id="changePassBtn" class="btn-link" type="button" style="display:none;">Change Password</button>
     </div>
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
     
@@ -60,7 +58,7 @@
       <label for="nameInput">Type Three letters of your name and click on 'Search' button</label>
       <div class="search-wrapper">
         <input type="text" id="nameInput" placeholder="Type letters here..." autocomplete="off">
-        <button type="button" onclick="executeSearch()">Search</button>
+        <button type="button" id="searchSubmitBtn">Search</button>
       </div>
       <div id="suggestions" class="suggestions"></div>
     </div>
@@ -70,7 +68,7 @@
       <input type="password" id="passwordInput" placeholder="6-character password">
     </div>
     
-    <button id="loginBtn" style="display:none; margin-top: 10px;" onclick="processLogin()">Access My Data</button>
+    <button id="loginBtn" style="display:none; margin-top: 10px;">Access My Data</button>
     <div id="loginMessage" class="status-msg error"></div>
   </div>
 
@@ -82,8 +80,8 @@
     <div id="datesGrid" class="grid-view"></div>
     
     <div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-      <button onclick="submitDates()">Save Changes</button>
-      <button class="btn-secondary" onclick="logout()">Logout</button>
+      <button id="saveDatesBtn">Save Changes</button>
+      <button class="btn-secondary" id="logoutBtn">Logout</button>
       <span id="saveStatus" class="status-msg"></span>
     </div>
   </div>
@@ -102,8 +100,8 @@
     </div>
     <div id="modalError" class="status-msg" style="margin-bottom:10px;"></div>
     <div class="modal-buttons">
-      <button class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
-      <button onclick="submitPasswordChange()">Update Password</button>
+      <button class="btn-secondary" id="closeModalBtn">Cancel</button>
+      <button id="submitNewPassBtn">Update Password</button>
     </div>
   </div>
 </div>
@@ -132,7 +130,7 @@
     };
     
     script.onerror = function() {
-      if(window[callbackName]) delete window[callbackName];
+      if(window[callbackName]) delete window[window[callbackName]];
       if(document.body.contains(script)) document.body.removeChild(script);
       if(errorHandler) errorHandler("Network connection timeout or error.");
     };
@@ -140,9 +138,19 @@
     document.body.appendChild(script);
   }
 
-  // Preemptive script trigger to warm up Google Apps Script instantly on page load
+  // Safely assign click events inside the loaded context
   window.addEventListener('DOMContentLoaded', () => {
+    // Warmup ping
     jsonpFetch(scriptUrl, { action: "ping" }, "cbPing", () => {}, () => {});
+
+    // Bind UI actions
+    document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
+    document.getElementById('loginBtn').addEventListener('click', processLogin);
+    document.getElementById('changePassBtn').addEventListener('click', openPasswordModal);
+    document.getElementById('closeModalBtn').addEventListener('click', closePasswordModal);
+    document.getElementById('submitNewPassBtn').addEventListener('click', submitPasswordChange);
+    document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
   });
 
   function executeSearch() {
