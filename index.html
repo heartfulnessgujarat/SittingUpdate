@@ -39,7 +39,6 @@
 <body>
 
 <div class="container">
-  <!-- LOGIN SECTION -->
   <div id="loginSection">
     <h2>User Login</h2>
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-bottom: 20px;">
@@ -65,7 +64,6 @@
     <div id="loginMessage" class="status-msg error"></div>
   </div>
 
-  <!-- PORTAL DASHBOARD SECTION -->
   <div id="dashboardSection" class="dashboard">
     <h2 id="welcomeTitle">Welcome</h2>
     <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please update Sitting Given Date</p>
@@ -81,7 +79,6 @@
   </div>
 </div>
 
-<!-- PASSWORD MODAL -->
 <div id="passwordModal" class="modal-backdrop">
   <div class="modal-box">
     <h3>Change Your Password</h3>
@@ -93,7 +90,7 @@
       <label>New Password (6 characters)</label>
       <input type="password" id="modalNewPass" maxlength="6" placeholder="Enter new password">
     </div>
-    <div id="modalError" class="status-msg error" style="margin-bottom:10px;"></div>
+    <div id="modalError" class="status-msg" style="margin-bottom:10px;"></div>
     <div class="modal-buttons">
       <button class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
       <button onclick="submitPasswordChange()">Update Password</button>
@@ -102,13 +99,11 @@
 </div>
 
 <script>
-  // Connected securely to your deployed Apps Script backend 
   const scriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec";
 
   let globalUserData = null;
   let selectedName = "";
 
-  // Universal JSONP helper function to talk cleanly to Google Apps Script
   function jsonpFetch(url, params, callbackName, successHandler, errorHandler) {
     const urlParams = new URLSearchParams(params);
     urlParams.append('callback', callbackName);
@@ -117,7 +112,7 @@
     script.src = `${url}?${urlParams.toString()}`;
     
     window[callbackName] = function(data) {
-      delete window[callbackName];
+      delete window[window[callbackName]];
       document.body.removeChild(script);
       if (data && data.error) {
         if(errorHandler) errorHandler(data.error);
@@ -201,6 +196,7 @@
     document.getElementById('modalOldPass').value = "";
     document.getElementById('modalNewPass').value = "";
     document.getElementById('modalError').innerText = "";
+    document.getElementById('modalError').className = "status-msg";
     document.getElementById('passwordModal').style.display = "flex";
   }
   
@@ -215,10 +211,12 @@
     
     if(!oldPass || !newPass) {
       errorDiv.innerText = "Please fill in both password fields.";
+      errorDiv.className = "status-msg error";
       return;
     }
     if(newPass.length !== 6) {
       errorDiv.innerText = "New password must be exactly 6 characters.";
+      errorDiv.className = "status-msg error";
       return;
     }
     
@@ -229,9 +227,10 @@
     let payload = JSON.stringify({oldPassword: oldPass, newPassword: newPass});
 
     jsonpFetch(scriptUrl, { action: "updatePassword", rowNumber: executionRow, payload: payload }, "cbPass", function(response) {
-      alert(response.message);
+      errorDiv.innerText = "Password changed successfully!";
+      errorDiv.className = "status-msg"; // Simple, clean text indicator inside modal
       document.getElementById('passwordInput').value = newPass;
-      closePasswordModal();
+      setTimeout(() => { closePasswordModal(); }, 2000);
     }, function(err) {
       errorDiv.innerText = err;
       errorDiv.className = "status-msg error";
@@ -251,7 +250,8 @@
     let rowValues = globalUserData.rowData;
     let headers = globalUserData.headers;
 
-    for (let i = 0; i < 19; i++) {
+    // Strict boundary optimization: Run only up to index 14 (Column O) to hide P, Q, R, S
+    for (let i = 0; i < 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
       
