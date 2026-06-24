@@ -112,7 +112,6 @@
   let globalUserData = null;
   let selectedName = "";
 
-  // Performance-optimized transport mechanism
   function jsonpFetch(url, params, callbackName, successHandler, errorHandler) {
     const urlParams = new URLSearchParams(params);
     urlParams.append('callback', callbackName);
@@ -141,7 +140,7 @@
 
   function executeSearch() {
     let query = document.getElementById('nameInput').value;
-    let ]suggBox = document.getElementById('suggestions');
+    let suggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
     
     suggBox.innerHTML = "";
@@ -168,5 +167,151 @@
             suggBox.innerHTML = "";
             suggBox.style.display = "none";
             document.getElementById('passwordGroup').style.display = 'block';
-            document.getElementById('changePassBtn').style.display = 'block'; // Shows link at top when user is active
+            document.getElementById('changePassBtn').style.display = 'block'; 
             document.getElementById('loginBtn').style.display = 'block';
+          };
+          suggBox.appendChild(div);
+        });
+      } else {
+        msgDiv.innerText = "No matching names found.";
+        msgDiv.className = "status-msg error";
+      }
+    }, function(err) {
+      msgDiv.innerText = "Error: " + err;
+    });
+  }
+
+  function processLogin() {
+    let password = document.getElementById('passwordInput').value;
+    let msgDiv = document.getElementById('loginMessage');
+    msgDiv.innerText = "Verifying password...";
+    msgDiv.className = "status-msg";
+    
+    jsonpFetch(scriptUrl, { action: "login", name: selectedName, password: password }, "cbLogin", function(response) {
+      if (response.success) {
+        msgDiv.innerText = "";
+        globalUserData = response;
+        buildDashboard();
+      } else {
+        msgDiv.innerText = response.message;
+        msgDiv.className = "status-msg error";
+      }
+    }, function(err) {
+      msgDiv.innerText = "Verification error: " + err;
+    });
+  }
+
+  function openPasswordModal() {
+    document.getElementById('modalOldPass').value = "";
+    document.getElementById('modalNewPass').value = "";
+    document.getElementById('modalError').innerText = "";
+    document.getElementById('modalError').className = "status-msg";
+    document.getElementById('passwordModal').style.display = "flex";
+  }
+  
+  function closePasswordModal() {
+    document.getElementById('passwordModal').style.display = "none";
+  }
+
+  function submitPasswordChange() {
+    let oldPass = document.getElementById('modalOldPass').value;
+    let newPass = document.getElementById('modalNewPass').value;
+    let errorDiv = document.getElementById('modalError');
+    
+    if(!oldPass || !newPass) {
+      errorDiv.innerText = "Please fill in both password fields.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    if(newPass.length !== 6) {
+      errorDiv.innerText = "New password must be exactly 6 characters.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    
+    errorDiv.innerText = "Processing configuration update...";
+    errorDiv.className = "status-msg";
+    
+    let executionRow = globalUserData ? globalUserData.rowNumber : 2;
+    let payload = JSON.stringify({oldPassword: oldPass, newPassword: newPass});
+
+    jsonpFetch(scriptUrl, { action: "updatePassword", rowNumber: executionRow, payload: payload }, "cbPass", function(response) {
+      errorDiv.innerText = "Password changed successfully!";
+      errorDiv.className = "status-msg";
+      document.getElementById('passwordInput').value = newPass;
+      setTimeout(() => { closePasswordModal(); }, 2000);
+    }, function(err) {
+      errorDiv.innerText = err;
+      errorDiv.className = "status-msg error";
+    });
+  }
+
+  function buildDashboard() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+    document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
+    
+    let readOnlyGrid = document.getElementById('readOnlyGrid');
+    let datesGrid = document.getElementById('datesGrid');
+    readOnlyGrid.innerHTML = "";
+    datesGrid.innerHTML = "";
+    
+    let rowValues = globalUserData.rowData;
+    let headers = globalUserData.headers;
+
+    for (let i = 0; i < 15; i++) {
+      let rawVal = rowValues[i] ? rowValues[i] : "";
+      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
+      
+      if(rawVal && typeof rawVal === 'string' && rawVal.includes('T')) {
+         let d = new Date(rawVal);
+         if(!isNaN(d)) rawVal = d.toISOString().split('T')[0];
+      }
+
+      if (i >= 3 && i <= 14) { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" value="${rawVal}">`;
+        datesGrid.appendChild(div);
+      } else { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
+        readOnlyGrid.appendChild(div);
+      }
+    }
+  }
+
+  function submitDates() {
+    let statusSpan = document.getElementById('saveStatus');
+    statusSpan.innerText = "Saving data...";
+    statusSpan.className = "status-msg";
+    
+    let dateInputs = document.getElementsByClassName('date-input');
+    let updatedDatesPayload = [];
+    for (let i = 0; i < dateInputs.length; i++) {
+      updatedDatesPayload.push(dateInputs[i].value);
+    }
+    
+    jsonpFetch(scriptUrl, { action: "updateDates", rowNumber: globalUserData.rowNumber, payload: JSON.stringify(updatedDatesPayload) }, "cbDates", function(response) {
+      statusSpan.innerText = response.message;
+      setTimeout(() => { statusSpan.innerText = ""; }, 4000);
+    }, function(err) {
+      statusSpan.innerText = "Error saving: " + err;
+    });
+  }
+
+  function logout() {
+    globalUserData = null;
+    selectedName = "";
+    document.getElementById('nameInput').value = "";
+    document.getElementById('passwordInput').value = "";
+    document.getElementById('passwordGroup').style.display = 'none';
+    document.getElementById('changePassBtn').style.display = 'none';
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+  }
+</script>
+</body>
+</html>
