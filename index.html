@@ -396,7 +396,9 @@
     }
   }
 
-function buildDashboard() {
+
+
+  function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -409,12 +411,20 @@ function buildDashboard() {
     document.getElementById('allDoneMsg').style.display = 'none';
     document.getElementById('addMoreDatesBtn').style.display = 'inline-block';
 
-    // FIX (Part 3): Ensure button starts fully active on a fresh login
     const saveBtn = document.getElementById('saveDatesBtn');
     saveBtn.style.display = 'inline-block';
-    saveBtn.disabled = false;
-    saveBtn.style.opacity = "1";
-    saveBtn.style.cursor = "pointer";
+
+    // SMART CHECK: Keep button disabled if we just completed a successful submission
+    if (document.getElementById('saveStatus').innerText !== "") {
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = "0.5";
+      saveBtn.style.cursor = "not-allowed";
+    } else {
+      // Otherwise, on a fresh login, it starts fully active
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = "1";
+      saveBtn.style.cursor = "pointer";
+    }
 
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
@@ -460,23 +470,6 @@ function buildDashboard() {
 
     checkIfAllSlotsFilled();
 }
-// Action function to dynamically show the next hidden blank slot
-  function exposeNextEmptyDateSlot() {
-    let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
-    if (hiddenSlots.length > 0) {
-      // Un-hide the very first available hidden slot
-      hiddenSlots[0].classList.remove('hidden-slot');
-      
-      // FIX: Re-enable the Save Changes button when "Add Another Date" is clicked
-      const saveBtn = document.getElementById('saveDatesBtn');
-      saveBtn.disabled = false;
-      saveBtn.style.opacity = "1";
-      saveBtn.style.cursor = "pointer";
-      
-      checkIfAllSlotsFilled();
-    }
-  }
-
   
   
   function checkIfAllSlotsFilled() {
