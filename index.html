@@ -8,7 +8,7 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 700px; background: white; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+    .header-row { display: block; text-align: center; }
     h2 { color: #1a73e8; margin: 0; }
     
     .btn-link { background: transparent !important; border: none !important; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 4px 0; transition: color 0.15s ease; outline: none; }
@@ -38,20 +38,45 @@
     .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; line-height: 1.5; }
     .error { color: #d93025; }
     .waitlist-msg { color: #e67e22; }
+
+    /* Centered Screen Modal Layout Overlay Fixes */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      width: 100%;
+      max-width: 450px;
+      box-sizing: border-box;
+    }
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div id="loginSection">
-
-
-<div class="header-row" style="display: block; text-align: center;">
+    <div class="header-row">
       <h2 style="text-align: center; line-height: 1.4; margin: 10px auto; width: 100%;">Physician Wellness Research Study Program <br>Preceptor Login</h2>
       <button id="changePassBtn" class="btn-link" type="button" style="display:none; margin: 5px auto;">Change Password</button>
     </div>
-    
-    
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
 
     <div class="form-group">
@@ -75,7 +100,7 @@
 
   <div id="dashboardSection" class="dashboard">
     <h2 id="welcomeTitle">Welcome</h2>
-    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please verify your name and name of the Doctor assinged to you and then update the Sitting Given Date.</p>
+    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please update Sitting Given Date</p>
     
     <div id="readOnlyGrid" class="grid-view"></div>
     <div id="datesGrid" class="grid-view"></div>
@@ -88,9 +113,9 @@
   </div>
 </div>
 
-<div id="passwordModal" class="modal-backdrop" style="display: none;">
+<div id="passwordModal" class="modal-backdrop">
   <div class="modal-box">
-    <h3>Change Your Password</h3>
+    <h3 style="margin-top: 0; color: #1a73e8;">Change Your Password</h3>
     <div class="form-group">
       <label>Current Password</label>
       <input type="password" id="modalOldPass" placeholder="Enter current password">
@@ -248,7 +273,6 @@
     }
   }
 
-  // Wipes screen structures and performs background reload reset
   function resetSearchScreen() {
     document.getElementById('nameInput').value = "";
     document.getElementById('loginMessage').innerText = "";
@@ -400,7 +424,7 @@
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "Sitting Given Date is updated in the database, successfully!";
+      statusSpan.innerText = "System entries committed to database successfully!";
       setTimeout(() => { statusSpan.innerText = ""; }, 3000);
     } catch(err) {
       statusSpan.innerText = "Database sync failed.";
@@ -408,7 +432,6 @@
     }
   }
 
-  // Master sheet logout route
   function logout() {
     activeUserRecord = null;
     selectedName = "";
