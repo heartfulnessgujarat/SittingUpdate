@@ -35,13 +35,9 @@
     .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
     .grid-item span { display: block; font-size: 12px; color: #1a73e8; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .grid-item strong { word-break: break-all; font-size: 15px; color: #202124; }
-    .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; }
+    .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; line-height: 1.5; }
     .error { color: #d93025; }
-    
-    .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-    .modal-box { background: white; padding: 25px; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-    .modal-box h3 { margin-top: 0; color: #202124; }
-    .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .waitlist-msg { color: #e67e22; }
   </style>
 </head>
 <body>
@@ -69,7 +65,7 @@
     </div>
     
     <button id="loginBtn" style="display:none; margin-top: 10px;">Access My Data</button>
-    <div id="loginMessage" class="status-msg error"></div>
+    <div id="loginMessage" class="status-msg"></div>
   </div>
 
   <div id="dashboardSection" class="dashboard">
@@ -108,12 +104,12 @@
 
 <script>
   // CONFIGURATION CONSTANTS
-
-  // CONFIGURATION CONSTANTS
   const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec"; 
   const firebaseDbUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users.json";
+  const firebaseWaitlistUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/waitlist.json";
 
   let allUsersCache = null;
+  let waitlistCache = null;
   let activeUserRecord = null;
   let selectedName = "";
 
@@ -134,30 +130,46 @@
       allUsersCache = await response.json();
       return allUsersCache;
     } catch (err) {
-      console.error("Firebase fetch error:", err);
+      console.error("Firebase master fetch error:", err);
+      return null;
+    }
+  }
+
+  async function fetchWaitlistData() {
+    if (waitlistCache) return waitlistCache;
+    try {
+      const response = await fetch(firebaseWaitlistUrl);
+      waitlistCache = await response.json();
+      return waitlistCache;
+    } catch (err) {
+      console.error("Firebase waitlist fetch error:", err);
       return null;
     }
   }
 
   async function executeSearch() {
     let query = document.getElementById('nameInput').value.trim().toLowerCase();
-    let suggBox = document.getElementById('suggestions');
+    let toggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
     
-    suggBox.innerHTML = "";
-    suggBox.style.display = "none";
+    toggBox.innerHTML = "";
+    toggBox.style.display = "none";
+    document.getElementById('passwordGroup').style.display = 'none';
+    document.getElementById('changePassBtn').style.display = 'none'; 
+    document.getElementById('loginBtn').style.display = 'none';
+    msgDiv.innerText = "";
+    msgDiv.className = "status-msg";
     
     if (query.length < 3) {
       alert("Please type at least 3 characters to search.");
       return;
     }
     
-    msgDiv.innerText = "Searching local database...";
-    msgDiv.className = "status-msg";
+    msgDiv.innerText = "Searching profile registries...";
 
     let database = await fetchFirebaseData();
     if (!database) {
-      msgDiv.innerText = "Network database error. Please refresh.";
+      msgDiv.innerText = "Network link failure. Please refresh and retry.";
       msgDiv.className = "status-msg error";
       return;
     }
@@ -165,11 +177,12 @@
     msgDiv.innerText = "";
     let matchesFound = false;
 
+    // 1. Search inside Master Registry List
     Object.keys(database).forEach(key => {
       let user = database[key];
       if (user.name && user.name.toLowerCase().indexOf(query) !== -1) {
         matchesFound = true;
-        suggBox.style.display = "block";
+        toggBox.style.display = "block";
         let div = document.createElement('div');
         div.className = 'suggestion-item';
         div.innerText = user.name;
@@ -177,19 +190,37 @@
           document.getElementById('nameInput').value = user.name;
           selectedName = user.name;
           activeUserRecord = user; 
-          suggBox.innerHTML = "";
-          suggBox.style.display = "none";
+          toggBox.innerHTML = "";
+          toggBox.style.display = "none";
           document.getElementById('passwordGroup').style.display = 'block';
           document.getElementById('changePassBtn').style.display = 'block'; 
           document.getElementById('loginBtn').style.display = 'block';
         };
-        suggBox.appendChild(div);
+        toggBox.appendChild(div);
       }
     });
 
+    // 2. Fallback routing logic to check waitlist
     if (!matchesFound) {
-      msgDiv.innerText = "No matching profiles found.";
-      msgDiv.className = "status-msg error";
+      let waitlist = await fetchWaitlistData();
+      let foundInWaitlist = false;
+
+      if (waitlist) {
+        Object.keys(waitlist).forEach(key => {
+          let wUser = waitlist[key];
+          if (wUser.name && wUser.name.toLowerCase().indexOf(query) !== -1) {
+            foundInWaitlist = true;
+          }
+        });
+      }
+
+      if (foundInWaitlist) {
+        msgDiv.innerText = "You are in Waitlisted List and we will assign Doctor to you in Phase#2";
+        msgDiv.className = "status-msg waitlist-msg"; 
+      } else {
+        msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282";
+        msgDiv.className = "status-msg error";
+      }
     }
   }
 
@@ -250,16 +281,14 @@
 
     activeUserRecord.password = newPass;
     let nodeKey = "row_" + activeUserRecord.rowNumber;
-    let patchUrl = `https://${firebaseDbUrl.split('/')[2]}/users/${nodeKey}.json`;
+    let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
-      // 1. Instant Firebase Save
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ password: newPass })
       });
 
-      // 2. Background Sheet Sync
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -318,22 +347,19 @@
       updatedDatesPayload.push(dateInputs[i].value);
     }
 
-    // Apply mutation locally first
     for(let i=0; i<updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i+3] = updatedDatesPayload[i];
     }
     
     let nodeKey = "row_" + activeUserRecord.rowNumber;
-    let patchUrl = `https://${firebaseDbUrl.split('/')[2]}/users/${nodeKey}.json`;
+    let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
-      // 1. Direct Firebase Save (Near 0ms delay)
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
 
-      // 2. Async Master Google Sheet Pipeline Update
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -359,6 +385,7 @@
     document.getElementById('loginBtn').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'none';
     document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('loginMessage').innerText = "";
   }
 </script>
 </body>
