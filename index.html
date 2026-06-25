@@ -400,7 +400,99 @@ function getTodayDateString() {
     }
   }
 
-  function buildDashboard() {
+function buildDashboard() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+    document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
+    
+    let readOnlyGrid = document.getElementById('readOnlyGrid');
+    let datesGrid = document.getElementById('datesGrid');
+    readOnlyGrid.innerHTML = "";
+    datesGrid.innerHTML = "";
+    
+    let rowValues = activeUserRecord.rowData;
+    let headers = activeUserRecord.headers;
+
+    // 1. Build Read-Only Grid for Columns A, B, C (Rows 0, 1, 2)
+    for (let i = 0; i < 3; i++) {
+      let rawVal = rowValues[i] ? rowValues[i] : "";
+      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
+      let div = document.createElement('div');
+      div.className = 'grid-item';
+      div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
+      readOnlyGrid.appendChild(div);
+    }
+
+    // 2. Build the Smart Date Input Filter (Columns D to O / Indexes 3 to 14)
+    let nextEmptyFound = false;
+
+    for (let i = 3; i <= 14; i++) {
+      let rawVal = rowValues[i] ? rowValues[i].trim() : "";
+      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 2));
+
+      if (rawVal !== "") {
+        // This slot is ALREADY filled. Show it in tiny font text history mode.
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.style.padding = '6px 12px'; // Tighter spacing
+        div.style.background = '#f1f3f4';
+        div.innerHTML = `
+          <span style="font-size: 11px; color: #5f6368;">${title} (Saved)</span>
+          <strong style="font-size: 13px; color: #3c4043;">${rawVal}</strong>
+          <input type="hidden" class="date-input" value="${rawVal}">
+        `;
+        datesGrid.appendChild(div);
+      } else {
+        // This slot is EMPTY.
+        if (!nextEmptyFound) {
+          // It is the VERY FIRST empty slot available! Render it as the active entry block.
+          let div = document.createElement('div');
+          div.className = 'grid-item';
+          div.style.border = '2px solid #1a73e8'; // Highlight it elegantly
+          div.innerHTML = `
+            <span style="color: #1a73e8; font-weight: bold;">New Entry: ${title}</span>
+            <input type="date" class="date-input" max="${getTodayDateString()}" value="" style="margin-top: 5px; border-color: #1a73e8;">
+          `;
+          datesGrid.appendChild(div);
+          nextEmptyFound = true; // Block any subsequent empty fields from generating
+        } else {
+          // It's a future empty slot. We render a hidden input field so the save script index array positions don't break.
+          let hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.className = 'date-input';
+          hiddenInput.value = '';
+          datesGrid.appendChild(hiddenInput);
+        }
+      }
+    }
+
+    // Inform the user elegantly if all 12 entries have already been used up.
+    if (!nextEmptyFound) {
+      let completeDiv = document.createElement('div');
+      completeDiv.style.gridColumn = '1 / -1';
+      completeDiv.style.padding = '12px';
+      completeDiv.style.backgroundColor = '#e8f0fe';
+      completeDiv.style.color = '#1a73e8';
+      completeDiv.style.borderRadius = '4px';
+      completeDiv.style.fontWeight = '600';
+      completeDiv.style.textAlign = 'center';
+      completeDiv.innerText = "All 12 Sitting Given Date records have been completed.";
+      datesGrid.appendChild(completeDiv);
+      
+      // Hide the Save Changes button since there is nothing new to add
+      document.getElementById('saveDatesBtn').style.display = 'none';
+    } else {
+      // Ensure save button is visible if there is an active text box
+      document.getElementById('saveDatesBtn').style.display = 'inline-block';
+    }
+  }
+
+
+
+
+
+  
+  function OLD-buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -427,12 +519,7 @@ if (i >= 3 && i <= 14) {
         datesGrid.appendChild(div);
       } else {
 
-
-
-
-
-
-        
+       
         let div = document.createElement('div');
         div.className = 'grid-item';
         div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
@@ -480,6 +567,13 @@ if (i >= 3 && i <= 14) {
     }
   }
 
+
+
+
+
+
+
+  
   function logout() {
     activeUserRecord = null;
     selectedName = "";
