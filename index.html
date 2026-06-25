@@ -177,6 +177,18 @@
     }
   }
 
+// Helper to get today's local date string formatted as YYYY-MM-DD
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+
+
+  
   async function fetchFirebaseData() {
     if (allUsersCache) return allUsersCache;
     try {
@@ -405,12 +417,22 @@
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
 
-      if (i >= 3 && i <= 14) { 
+
+
+if (i >= 3 && i <= 14) { 
         let div = document.createElement('div');
         div.className = 'grid-item';
-        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" value="${rawVal}">`;
+        // Added the max attribute restriction here
+        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
-      } else { 
+      } else {
+
+
+
+
+
+
+        
         let div = document.createElement('div');
         div.className = 'grid-item';
         div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
