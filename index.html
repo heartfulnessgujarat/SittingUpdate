@@ -17,23 +17,61 @@
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
     input[type="text"], input[type="password"], input[type="date"] { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; }
+    input:focus { border-color: #1a73e8; outline: none; }
     
-    /* Password grouping row */
-    .password-row { display: flex; gap: 10px; align-items: flex-end; }
-    .password-row .input-wrapper { flex: 1; }
+    /* Puts Enter Password field and Change Password button side-by-side cleanly */
+    .password-row { display: flex; gap: 12px; align-items: center; }
+    .password-row input { flex: 1; }
+    .password-row button { height: 47px; padding: 0 15px; font-size: 14px; white-space: nowrap; flex-shrink: 0; }
     
     .search-wrapper { display: flex; gap: 10px; }
     .search-wrapper input { flex: 1; }
     .suggestions { max-height: 200px; overflow-y: auto; background: #f8f9fa; border: 1px solid #dadce0; margin-top: 5px; border-radius: 4px; display: none; }
     .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+    .suggestion-item:hover { background-color: #e8eaed; color: #1a73e8; }
     
     button { background-color: #1a73e8; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
     button:hover { background-color: #1557b0; }
     .btn-secondary { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
+    .btn-secondary:hover { background-color: #e8eaed; }
     
-    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 9999; }
-    .modal-box { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; }
-    .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+    .dashboard { display: none; }
+    .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .grid-item span { display: block; font-size: 12px; color: #1a73e8; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .grid-item strong { word-break: break-all; font-size: 15px; color: #202124; }
+    .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; line-height: 1.5; }
+    .error { color: #d93025; }
+    .waitlist-msg { color: #e67e22; }
+
+    /* Modal box positioning fix (stops overlap, uses fixed screen center framework) */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.55);
+      display: none; 
+      justify-content: center;
+      align-items: center;
+      z-index: 9999; /* Higher priority stack index layer */
+    }
+    .modal-box {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 450px;
+      box-sizing: border-box;
+    }
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -41,14 +79,14 @@
 <div class="container">
   <div id="loginSection">
     <div class="header-row">
-      <h2 style="text-align: center; line-height: 1.4; margin: 10px auto;">Physician Wellness Research Study Program <br>Preceptor Login</h2>
+      <h2 style="text-align: center; line-height: 1.4; margin: 10px auto; width: 100%;">Physician Wellness Research Study Program <br>Preceptor Login</h2>
     </div>
-    <hr style="margin: 20px 0;">
+    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
 
     <div class="form-group">
-      <label>Type Three letters of your name and click on 'Search'</label>
+      <label for="nameInput">Type Three letters of your name and click on 'Search' button</label>
       <div class="search-wrapper">
-        <input type="text" id="nameInput" placeholder="Type letters here...">
+        <input type="text" id="nameInput" placeholder="Type letters here..." autocomplete="off">
         <button type="button" id="searchSubmitBtn">Search</button>
         <button type="button" id="clearScreenBtn" class="btn-secondary" style="display:none;">Search Again</button>
       </div>
@@ -56,33 +94,44 @@
     </div>
     
     <div class="form-group" id="passwordGroup" style="display:none;">
-      <label>Enter Password</label>
+      <label for="passwordInput">Enter Password</label>
       <div class="password-row">
-        <div class="input-wrapper">
-          <input type="password" id="passwordInput" placeholder="6-character password">
-        </div>
+        <input type="password" id="passwordInput" placeholder="6-character password">
         <button id="changePassBtn" class="btn-secondary" type="button">Change Password</button>
       </div>
     </div>
     
-    <button id="loginBtn" style="display:none; width: 100%;">Access My Data</button>
-    <div id="loginMessage" style="margin-top: 15px; font-weight: bold;"></div>
+    <button id="loginBtn" style="display:none; margin-top: 20px; width: 100%;">Access My Data</button>
+    <div id="loginMessage" class="status-msg"></div>
+  </div>
+
+  <div id="dashboardSection" class="dashboard">
+    <h2 id="welcomeTitle">Welcome</h2>
+    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please update Sitting Given Date</p>
+    
+    <div id="readOnlyGrid" class="grid-view"></div>
+    <div id="datesGrid" class="grid-view"></div>
+    
+    <div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+      <button id="saveDatesBtn">Save Changes</button>
+      <button class="btn-secondary" id="logoutBtn">Logout</button>
+      <span id="saveStatus" class="status-msg"></span>
+    </div>
   </div>
 </div>
 
-<!-- Password Modal -->
 <div id="passwordModal" class="modal-backdrop">
   <div class="modal-box">
-    <h3>Change Your Password</h3>
+    <h3 style="margin-top: 0; color: #1a73e8;">Change Your Password</h3>
     <div class="form-group">
       <label>Current Password</label>
-      <input type="password" id="modalOldPass">
+      <input type="password" id="modalOldPass" placeholder="Enter current password">
     </div>
     <div class="form-group">
       <label>New Password (6 characters)</label>
-      <input type="password" id="modalNewPass" maxlength="6">
+      <input type="password" id="modalNewPass" maxlength="6" placeholder="Enter new password">
     </div>
-    <div id="modalError"></div>
+    <div id="modalError" class="status-msg" style="margin-bottom:10px;"></div>
     <div class="modal-buttons">
       <button class="btn-secondary" id="closeModalBtn">Cancel</button>
       <button id="submitNewPassBtn">Update Password</button>
@@ -91,12 +140,265 @@
 </div>
 
 <script>
-  // Script logic remains the same; ensure your existing URLs are present here
-  const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec";
+  const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec"; 
   const firebaseDbUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users.json";
+  const firebaseWaitlistUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/waitlist.json";
+
+  let allUsersCache = null;
+  let waitlistCache = null;
+  let activeUserRecord = null;
+  let selectedName = "";
+
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
+    document.getElementById('clearScreenBtn').addEventListener('click', resetSearchScreen);
+    document.getElementById('loginBtn').addEventListener('click', processLogin);
+    document.getElementById('changePassBtn').addEventListener('click', openPasswordModal);
+    document.getElementById('closeModalBtn').addEventListener('click', closePasswordModal);
+    document.getElementById('submitNewPassBtn').addEventListener('click', submitPasswordChange);
+    document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+  });
+
+  async function fetchFirebaseData() {
+    if (allUsersCache) return allUsersCache;
+    try {
+      const response = await fetch(firebaseDbUrl);
+      allUsersCache = await response.json();
+      return allUsersCache;
+    } catch (err) {
+      console.error("Firebase master fetch error:", err);
+      return null;
+    }
+  }
+
+  async function fetchWaitlistData() {
+    if (waitlistCache) return waitlistCache;
+    try {
+      const response = await fetch(firebaseWaitlistUrl);
+      waitlistCache = await response.json();
+      return waitlistCache;
+    } catch (err) {
+      console.error("Firebase waitlist fetch error:", err);
+      return null;
+    }
+  }
+
+  async function executeSearch() {
+    let query = document.getElementById('nameInput').value.trim().toLowerCase();
+    let toggBox = document.getElementById('suggestions');
+    let msgDiv = document.getElementById('loginMessage');
+    
+    toggBox.innerHTML = "";
+    toggBox.style.display = "none";
+    document.getElementById('passwordGroup').style.display = 'none';
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('clearScreenBtn').style.display = 'none';
+    msgDiv.innerText = "";
+    msgDiv.className = "status-msg";
+    
+    if (query.length < 3) {
+      alert("Please type at least 3 characters to search.");
+      return;
+    }
+    
+    msgDiv.innerText = "Searching profile registries...";
+
+    let database = await fetchFirebaseData();
+    let waitlist = await fetchWaitlistData();
+
+    if (!database) {
+      msgDiv.innerText = "Network database error. Please refresh.";
+      msgDiv.className = "status-msg error";
+      return;
+    }
+
+    msgDiv.innerText = "";
+    let matchesFound = false;
+
+    if (database) {
+      Object.keys(database).forEach(key => {
+        let user = database[key];
+        if (user.name && user.name.toLowerCase().indexOf(query) !== -1) {
+          matchesFound = true;
+          toggBox.style.display = "block";
+          let div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerText = user.name;
+          div.onclick = function() {
+            document.getElementById('nameInput').value = user.name;
+            selectedName = user.name;
+            activeUserRecord = user; 
+            toggBox.innerHTML = "";
+            toggBox.style.display = "none";
+            msgDiv.innerText = ""; 
+            
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('loginBtn').style.display = 'block';
+            document.getElementById('clearScreenBtn').style.display = 'none';
+          };
+          if(toggBox) toggBox.appendChild(div);
+        }
+      });
+    }
+
+    if (waitlist) {
+      Object.keys(waitlist).forEach(key => {
+        let wUser = waitlist[key];
+        if (wUser.name && wUser.name.toLowerCase().indexOf(query) !== -1) {
+          matchesFound = true;
+          toggBox.style.display = "block";
+          let div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerText = wUser.name; 
+          div.onclick = function() {
+            document.getElementById('nameInput').value = wUser.name;
+            selectedName = wUser.name;
+            activeUserRecord = null; 
+            toggBox.innerHTML = "";
+            toggBox.style.display = "none";
+            
+            msgDiv.innerText = "You are in Waitlisted List and we will assign Doctor to you in Phase#2";
+            msgDiv.className = "status-msg waitlist-msg"; 
+            document.getElementById('clearScreenBtn').style.display = 'inline-block';
+          };
+          if(toggBox) toggBox.appendChild(div);
+        }
+      });
+    }
+
+    if (!matchesFound) {
+      msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282.";
+      msgDiv.className = "status-msg error";
+      document.getElementById('clearScreenBtn').style.display = 'inline-block';
+    }
+  }
+
+  function resetSearchScreen() {
+    document.getElementById('nameInput').value = "";
+    document.getElementById('loginMessage').innerText = "";
+    document.getElementById('clearScreenBtn').style.display = 'none';
+    activeUserRecord = null;
+    selectedName = "";
+  }
+
+  function processLogin() {
+    let inputPassword = document.getElementById('passwordInput').value.trim();
+    let msgDiv = document.getElementById('loginMessage');
+    
+    if (!activeUserRecord) {
+      msgDiv.innerText = "Please select a verified name first.";
+      msgDiv.className = "status-msg error";
+      return;
+    }
+
+    if (activeUserRecord.password === inputPassword) {
+      msgDiv.innerText = "";
+      buildDashboard();
+    } else {
+      msgDiv.innerText = "Incorrect security password.";
+      msgDiv.className = "status-msg error";
+    }
+  }
+
+  function openPasswordModal() {
+    document.getElementById('modalOldPass').value = "";
+    document.getElementById('modalNewPass').value = "";
+    document.getElementById('modalError').innerText = "";
+    document.getElementById('modalError').className = "status-msg";
+    document.getElementById('passwordModal').style.display = "flex";
+  }
   
-  // (Include the rest of your existing JS logic here)
-  // Ensure the openPasswordModal function sets style.display = "flex" for #passwordModal
-</script>
-</body>
-</html>
+  function closePasswordModal() {
+    document.getElementById('passwordModal').style.display = "none";
+  }
+
+  async function submitPasswordChange() {
+    let oldPass = document.getElementById('modalOldPass').value.trim();
+    let newPass = document.getElementById('modalNewPass').value.trim();
+    let errorDiv = document.getElementById('modalError');
+    
+    if(!oldPass || !newPass) {
+      errorDiv.innerText = "Please complete all password rows.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    if(newPass.length !== 6) {
+      errorDiv.innerText = "Password structural layout must be exactly 6 characters.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    if(oldPass !== activeUserRecord.password) {
+      errorDiv.innerText = "Current verified password incorrect.";
+      errorDiv.className = "status-msg error";
+      return;
+    }
+    
+    errorDiv.innerText = "Syncing across infrastructure nodes...";
+    errorDiv.className = "status-msg";
+
+    activeUserRecord.password = newPass;
+    let nodeKey = "row_" + activeUserRecord.rowNumber;
+    let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
+
+    try {
+      await fetch(patchUrl, {
+        method: "PATCH",
+        body: JSON.stringify({ password: newPass })
+      });
+
+      fetch(googleScriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: newPass } })
+      });
+
+      errorDiv.innerText = "Security records updated successfully!";
+      document.getElementById('passwordInput').value = newPass;
+      setTimeout(() => { closePasswordModal(); }, 1200);
+    } catch(e) {
+      errorDiv.innerText = "Sync conflict detected.";
+      errorDiv.className = "status-msg error";
+    }
+  }
+
+  function buildDashboard() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+    document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
+    
+    let readOnlyGrid = document.getElementById('readOnlyGrid');
+    let datesGrid = document.getElementById('datesGrid');
+    readOnlyGrid.innerHTML = "";
+    datesGrid.innerHTML = "";
+    
+    let rowValues = activeUserRecord.rowData;
+    let headers = activeUserRecord.headers;
+
+    for (let i = 0; i < 15; i++) {
+      let rawVal = rowValues[i] ? rowValues[i] : "";
+      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
+
+      if (i >= 3 && i <= 14) { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" value="${rawVal}">`;
+        datesGrid.appendChild(div);
+      } else { 
+        let div = document.createElement('div');
+        div.className = 'grid-item';
+        div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
+        readOnlyGrid.appendChild(div);
+      }
+    }
+  }
+
+  async function submitDates() {
+    let statusSpan = document.getElementById('saveStatus');
+    statusSpan.innerText = "Writing instant records...";
+    statusSpan.className = "status-msg";
+    
+    let dateInputs = document.getElementsByClassName('date-input');
+    let updatedDatesPayload = [];
+    for (let i = 0; i < dateInputs.length;
