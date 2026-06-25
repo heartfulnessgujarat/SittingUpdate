@@ -98,7 +98,7 @@
     <div id="datesGrid" class="grid-view"></div>
     
     <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-      <button id="saveDatesBtn">Save Changes</button>
+      <button id="saveDatesBtn">Submit</button>
       <button type="button" id="addMoreDatesBtn" class="btn-secondary"><i class="fa-solid fa-plus" style="margin-right: 5px;"></i>Add Another Date</button>
       <button class="btn-secondary" id="logoutBtn">Logout</button>
       <span id="saveStatus" class="status-msg"></span>
@@ -517,7 +517,7 @@
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "System entries committed to database successfully!";
+      statusSpan.innerText = "Submitted!";
       // Re-trigger layout engine to properly filter the newly saved entries on screen
       setTimeout(() => { 
         statusSpan.innerText = ""; 
