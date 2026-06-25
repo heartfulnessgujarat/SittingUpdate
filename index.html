@@ -156,7 +156,6 @@
 
   let isSubmitDisabledAfterSave = false; // Tracks if we are locking the button post-submit
 
-  
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
     document.getElementById('clearScreenBtn').addEventListener('click', resetSearchScreen);
@@ -399,7 +398,7 @@
     }
   }
 
-function buildDashboard() {
+  function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -469,8 +468,8 @@ function buildDashboard() {
     }
 
     checkIfAllSlotsFilled();
-}
-  
+  }
+    
   function checkIfAllSlotsFilled() {
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     // If no more hidden slots remain and all current active text inputs have value
@@ -488,8 +487,29 @@ function buildDashboard() {
     }
   }
 
+  // Missing function added here! It safely opens a new box and unlocks the submit button.
+  function exposeNextEmptyDateSlot() {
+    let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
+    if (hiddenSlots.length > 0) {
+      // Release the global post-submit button lock entirely
+      isSubmitDisabledAfterSave = false;
+
+      // Un-hide the very first available hidden slot
+      hiddenSlots[0].classList.remove('hidden-slot');
+      
+      const saveBtn = document.getElementById('saveDatesBtn');
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = "1";
+      saveBtn.style.cursor = "pointer";
+      
+      checkIfAllSlotsFilled();
+    }
+  }
+
   async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
+    const saveBtn = document.getElementById('saveDatesBtn');
+    
     statusSpan.innerText = "Writing instant records...";
     statusSpan.className = "status-msg";
     
@@ -508,10 +528,7 @@ function buildDashboard() {
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
-
-
-
-try {
+    try {
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
@@ -526,7 +543,7 @@ try {
 
       statusSpan.innerText = "Submitted!!";
 
-  // Set the permanent global variable lock to true
+      // Set the permanent global variable lock to true
       isSubmitDisabledAfterSave = true;
       
       saveBtn.disabled = true;
@@ -539,20 +556,13 @@ try {
       }, 1500);
       
     } catch(err) {
-
-
-
-
-
-
-
-      
       statusSpan.innerText = "Database sync failed.";
       statusSpan.className = "status-msg error";
     }
   }
 
   function logout() {
+    isSubmitDisabledAfterSave = false; // Reset lock tracking state completely
     activeUserRecord = null;
     selectedName = "";
     document.getElementById('nameInput').value = "";
