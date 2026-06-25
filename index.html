@@ -399,9 +399,7 @@
     }
   }
 
-
-
-  function buildDashboard() {
+function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -417,13 +415,12 @@
     const saveBtn = document.getElementById('saveDatesBtn');
     saveBtn.style.display = 'inline-block';
 
-    // SMART CHECK: Keep button disabled if we just completed a successful submission
-    if (document.getElementById('saveStatus').innerText !== "") {
+    // Check our persistent global variable lock state
+    if (isSubmitDisabledAfterSave) {
       saveBtn.disabled = true;
       saveBtn.style.opacity = "0.5";
       saveBtn.style.cursor = "not-allowed";
     } else {
-      // Otherwise, on a fresh login, it starts fully active
       saveBtn.disabled = false;
       saveBtn.style.opacity = "1";
       saveBtn.style.cursor = "pointer";
@@ -457,9 +454,9 @@
         div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
       } else {
-        // EMPTY SLOTS: Hide ALL of them into hidden-slots by default if we are just re-building after a save.
-        // Show only the first one if it's the absolute first login state.
-        if (!nextEmptyFound && document.getElementById('saveStatus').innerText === "") {
+        // EMPTY SLOTS
+        // If the button is locked post-submit, hide ALL empty slots completely
+        if (!nextEmptyFound && !isSubmitDisabledAfterSave) {
           div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
           nextEmptyFound = true;
@@ -473,7 +470,6 @@
 
     checkIfAllSlotsFilled();
 }
-  
   
   function checkIfAllSlotsFilled() {
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
