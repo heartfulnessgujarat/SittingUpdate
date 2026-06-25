@@ -525,16 +525,19 @@ try {
       });
 
       statusSpan.innerText = "Submitted!!";
+
+  // Set the permanent global variable lock to true
+      isSubmitDisabledAfterSave = true;
       
-      // FIX: Disable the Save Changes button immediately after success
-      document.getElementById('saveDatesBtn').disabled = true;
-      document.getElementById('saveDatesBtn').style.opacity = "0.5";
-      document.getElementById('saveDatesBtn').style.cursor = "not-allowed";
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = "0.5";
+      saveBtn.style.cursor = "not-allowed";
 
       setTimeout(() => { 
         buildDashboard(); 
         statusSpan.innerText = ""; 
       }, 1500);
+      
     } catch(err) {
 
 
