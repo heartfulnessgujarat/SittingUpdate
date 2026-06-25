@@ -18,16 +18,13 @@
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
     
-    /* Input field design with space for the eye icon on the right */
     input[type="text"], input[type="password"], input[type="date"] { width: 100%; padding: 12px; padding-right: 40px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; }
     input:focus { border-color: #1a73e8; outline: none; }
     
-    /* Password layout structure */
     .password-row { display: flex; gap: 12px; align-items: center; }
     .password-row .eye-wrapper { flex: 1; position: relative; }
     .password-row button { height: 47px; padding: 0 15px; font-size: 14px; white-space: nowrap; flex-shrink: 0; }
     
-    /* Position eye toggle icons cleanly over the input field wrapper */
     .eye-wrapper { position: relative; width: 100%; }
     .toggle-password-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #70757a; font-size: 16px; transition: color 0.2s; z-index: 10; }
     .toggle-password-eye:hover { color: #1a73e8; }
@@ -55,6 +52,9 @@
     .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.55); display: none; justify-content: center; align-items: center; z-index: 9999; }
     .modal-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.25); width: 100%; max-width: 450px; box-sizing: border-box; }
     .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+    
+    /* Instructional password note helper style */
+    .password-hint-msg { display: block; font-size: 13px; color: #5f6368; margin-top: 6px; font-weight: 500; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -124,6 +124,7 @@
         <input type="password" id="modalNewPass" maxlength="6" placeholder="Enter new password">
         <i class="fa-solid fa-eye toggle-password-eye" onclick="togglePasswordVisibility('modalNewPass', this)"></i>
       </div>
+      <span class="password-hint-msg"><i class="fa-solid fa-circle-info" style="color: #1a73e8; margin-right: 4px;"></i> New password must be exactly 6 characters. It may contain any letters, digits, and special characters.</span>
     </div>
 
     <div class="form-group">
@@ -163,7 +164,6 @@
     document.getElementById('logoutBtn').addEventListener('click', logout);
   });
 
-  // Universal Toggle Function for password mask views
   function togglePasswordVisibility(inputId, eyeIcon) {
     const inputField = document.getElementById(inputId);
     if (inputField.type === "password") {
@@ -342,8 +342,9 @@
       errorDiv.className = "status-msg error";
       return;
     }
+    // Ensures length rule is strictly 6 characters
     if(newPass.length !== 6) {
-      errorDiv.innerText = "Password must be exactly 6 characters.";
+      errorDiv.innerText = "New password must be exactly 6 characters long.";
       errorDiv.className = "status-msg error";
       return;
     }
@@ -457,7 +458,6 @@
     }
   }
 
-  // Ensure type structures reset on logouts
   function logout() {
     activeUserRecord = null;
     selectedName = "";
