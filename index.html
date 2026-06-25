@@ -396,7 +396,8 @@
     }
   }
 
-  function buildDashboard() {
+
+function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -434,18 +435,17 @@
       div.className = 'grid-item';
 
       if (rawVal !== "") {
-        // 1. EARLIER SUBMITTED DATE: Fully editable as requested
+        // EARLIER SUBMITTED DATE: Fully editable
         div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
       } else {
-        // 2. EMPTY SLOTS
-        if (!nextEmptyFound) {
-          // Display the first available empty slot
+        // EMPTY SLOTS: Hide ALL of them into hidden-slots by default if we are just re-building after a save.
+        // Show only the first one if it's the absolute first login state.
+        if (!nextEmptyFound && document.getElementById('saveStatus').innerText === "") {
           div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
           nextEmptyFound = true;
         } else {
-          // Hide subsequent empty slots so mobile view stays small
           div.className = 'grid-item hidden-slot';
           div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
@@ -453,10 +453,15 @@
       }
     }
 
-    // Adjust visibility elements if all 12 elements are full from start
     checkIfAllSlotsFilled();
   }
 
+
+  
+  
+
+
+  
   // Action function to dynamically show the next hidden blank slot
   function exposeNextEmptyDateSlot() {
     let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
@@ -467,6 +472,7 @@
     }
   }
 
+  
   function checkIfAllSlotsFilled() {
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     // If no more hidden slots remain and all current active text inputs have value
@@ -518,11 +524,14 @@
       });
 
       statusSpan.innerText = "Submitted!";
-      // Re-trigger layout engine to properly filter the newly saved entries on screen
+
+// Clear message and rebuild safely without auto-opening a slot
       setTimeout(() => { 
-        statusSpan.innerText = ""; 
-        buildDashboard(); 
-      }, 1500);
+        buildDashboard(); // Rebuilds layout holding current saved states
+        statusSpan.innerText = ""; // Clears status text last
+      }, 1500);   
+    
+      
     } catch(err) {
       statusSpan.innerText = "Database sync failed.";
       statusSpan.className = "status-msg error";
