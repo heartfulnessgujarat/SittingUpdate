@@ -456,22 +456,24 @@ function buildDashboard() {
     checkIfAllSlotsFilled();
   }
 
-
-  
-  
-
-
-  
-  // Action function to dynamically show the next hidden blank slot
+// Action function to dynamically show the next hidden blank slot
   function exposeNextEmptyDateSlot() {
     let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     if (hiddenSlots.length > 0) {
       // Un-hide the very first available hidden slot
       hiddenSlots[0].classList.remove('hidden-slot');
+      
+      // FIX: Re-enable the Save Changes button when "Add Another Date" is clicked
+      const saveBtn = document.getElementById('saveDatesBtn');
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = "1";
+      saveBtn.style.cursor = "pointer";
+      
       checkIfAllSlotsFilled();
     }
   }
 
+  
   
   function checkIfAllSlotsFilled() {
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
