@@ -510,7 +510,10 @@ function buildDashboard() {
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
-    try {
+
+
+
+try {
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
@@ -523,16 +526,26 @@ function buildDashboard() {
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "Submitted!";
-
-// Clear message and rebuild safely without auto-opening a slot
-      setTimeout(() => { 
-        buildDashboard(); // Rebuilds layout holding current saved states
-        statusSpan.innerText = ""; // Clears status text last
-      }, 1500);   
-    
+      statusSpan.innerText = "System entries committed to database successfully!";
       
+      // FIX: Disable the Save Changes button immediately after success
+      document.getElementById('saveDatesBtn').disabled = true;
+      document.getElementById('saveDatesBtn').style.opacity = "0.5";
+      document.getElementById('saveDatesBtn').style.cursor = "not-allowed";
+
+      setTimeout(() => { 
+        buildDashboard(); 
+        statusSpan.innerText = ""; 
+      }, 1500);
     } catch(err) {
+
+
+
+
+
+
+
+      
       statusSpan.innerText = "Database sync failed.";
       statusSpan.className = "status-msg error";
     }
