@@ -450,7 +450,7 @@
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "System entries committed to database successfully!";
+      statusSpan.innerText = "Submitted!";
       setTimeout(() => { statusSpan.innerText = ""; }, 3000);
     } catch(err) {
       statusSpan.innerText = "Database sync failed.";
