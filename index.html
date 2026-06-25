@@ -488,46 +488,6 @@ function buildDashboard() {
   }
 
 
-
-
-
-  
-  function OLD-buildDashboard() {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'block';
-    document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
-    
-    let readOnlyGrid = document.getElementById('readOnlyGrid');
-    let datesGrid = document.getElementById('datesGrid');
-    readOnlyGrid.innerHTML = "";
-    datesGrid.innerHTML = "";
-    
-    let rowValues = activeUserRecord.rowData;
-    let headers = activeUserRecord.headers;
-
-    for (let i = 0; i < 15; i++) {
-      let rawVal = rowValues[i] ? rowValues[i] : "";
-      let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
-
-
-
-if (i >= 3 && i <= 14) { 
-        let div = document.createElement('div');
-        div.className = 'grid-item';
-        // Added the max attribute restriction here
-        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
-        datesGrid.appendChild(div);
-      } else {
-
-       
-        let div = document.createElement('div');
-        div.className = 'grid-item';
-        div.innerHTML = `<span>${title}</span><strong>${rawVal || "-"}</strong>`;
-        readOnlyGrid.appendChild(div);
-      }
-    }
-  }
-
   async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     statusSpan.innerText = "Writing instant records...";
