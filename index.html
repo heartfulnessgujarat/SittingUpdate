@@ -50,22 +50,15 @@
     </div>
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
 
-
-
-
-   <div class="form-group">
+    <div class="form-group">
       <label for="nameInput">Type Three letters of your name and click on 'Search' button</label>
       <div class="search-wrapper">
         <input type="text" id="nameInput" placeholder="Type letters here..." autocomplete="off">
         <button type="button" id="searchSubmitBtn">Search</button>
-        <button type="button" id="clearScreenBtn" class="btn-secondary" style="display:none;">Clear</button>
+        <button type="button" id="clearScreenBtn" class="btn-secondary" style="display:none;">Search Again</button>
       </div>
       <div id="suggestions" class="suggestions"></div>
     </div>
-
-
-
-
     
     <div class="form-group" id="passwordGroup" style="display:none;">
       <label for="passwordInput">Enter Password</label>
@@ -91,7 +84,7 @@
   </div>
 </div>
 
-  <div id="passwordModal" class="modal-backdrop" style="display: none;">
+<div id="passwordModal" class="modal-backdrop" style="display: none;">
   <div class="modal-box">
     <h3>Change Your Password</h3>
     <div class="form-group">
@@ -123,6 +116,7 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
+    document.getElementById('clearScreenBtn').addEventListener('click', resetSearchScreen);
     document.getElementById('loginBtn').addEventListener('click', processLogin);
     document.getElementById('changePassBtn').addEventListener('click', openPasswordModal);
     document.getElementById('closeModalBtn').addEventListener('click', closePasswordModal);
@@ -155,8 +149,7 @@
     }
   }
 
-
-async function executeSearch() {
+  async function executeSearch() {
     let query = document.getElementById('nameInput').value.trim().toLowerCase();
     let toggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
@@ -166,6 +159,7 @@ async function executeSearch() {
     document.getElementById('passwordGroup').style.display = 'none';
     document.getElementById('changePassBtn').style.display = 'none'; 
     document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('clearScreenBtn').style.display = 'none';
     msgDiv.innerText = "";
     msgDiv.className = "status-msg";
     
@@ -176,7 +170,6 @@ async function executeSearch() {
     
     msgDiv.innerText = "Searching profile registries...";
 
-    // Fetch both datasets upfront for instant side-by-side matching
     let database = await fetchFirebaseData();
     let waitlist = await fetchWaitlistData();
 
@@ -189,7 +182,7 @@ async function executeSearch() {
     msgDiv.innerText = "";
     let matchesFound = false;
 
-    // 1. Search inside Master Registry List
+    // 1. Search inside Master Registry List (Sheet1)
     if (database) {
       Object.keys(database).forEach(key => {
         let user = database[key];
@@ -205,20 +198,19 @@ async function executeSearch() {
             activeUserRecord = user; 
             toggBox.innerHTML = "";
             toggBox.style.display = "none";
-            msgDiv.innerText = ""; // Clear status messages
+            msgDiv.innerText = ""; 
             
-            // Show password validation options for Master users
             document.getElementById('passwordGroup').style.display = 'block';
             document.getElementById('changePassBtn').style.display = 'block'; 
             document.getElementById('loginBtn').style.display = 'block';
+            document.getElementById('clearScreenBtn').style.display = 'none';
           };
-          
           if(toggBox) toggBox.appendChild(div);
         }
       });
     }
 
-    // 2. Search inside Waitlist Node (Sheet2)
+    // 2. Search inside Waitlist Registry List (Sheet2)
     if (waitlist) {
       Object.keys(waitlist).forEach(key => {
         let wUser = waitlist[key];
@@ -227,33 +219,40 @@ async function executeSearch() {
           toggBox.style.display = "block";
           let div = document.createElement('div');
           div.className = 'suggestion-item';
-          div.innerText = wUser.name; // Displays their clean name in the dropdown list
+          div.innerText = wUser.name; 
           div.onclick = function() {
             document.getElementById('nameInput').value = wUser.name;
             selectedName = wUser.name;
-            activeUserRecord = null; // Clear master record references
+            activeUserRecord = null; 
             toggBox.innerHTML = "";
             toggBox.style.display = "none";
             
-            // Show the custom waitlist notification only AFTER they select their name
             msgDiv.innerText = "You are in Waitlisted List and we will assign Doctor to you in Phase#2";
             msgDiv.className = "status-msg waitlist-msg"; 
+            document.getElementById('clearScreenBtn').style.display = 'inline-block';
           };
           if(toggBox) toggBox.appendChild(div);
         }
       });
     }
 
-    // 3. If completely missing from both registries
+    // 3. Unregistered Path (Missing from both)
     if (!matchesFound) {
       msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282.";
       msgDiv.className = "status-msg error";
+      document.getElementById('clearScreenBtn').style.display = 'inline-block';
     }
   }
-  
 
+  // Wipes screen structures and performs background reload reset
+  function resetSearchScreen() {
+    document.getElementById('nameInput').value = "";
+    document.getElementById('loginMessage').innerText = "";
+    document.getElementById('clearScreenBtn').style.display = 'none';
+    activeUserRecord = null;
+    selectedName = "";
+  }
 
-  
   function processLogin() {
     let inputPassword = document.getElementById('passwordInput').value.trim();
     let msgDiv = document.getElementById('loginMessage');
@@ -405,6 +404,7 @@ async function executeSearch() {
     }
   }
 
+  // Master sheet logout route
   function logout() {
     activeUserRecord = null;
     selectedName = "";
