@@ -526,7 +526,7 @@ try {
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "System entries committed to database successfully!";
+      statusSpan.innerText = "Submitted!!";
       
       // FIX: Disable the Save Changes button immediately after success
       document.getElementById('saveDatesBtn').disabled = true;
