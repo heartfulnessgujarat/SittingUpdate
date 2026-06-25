@@ -147,7 +147,8 @@
     }
   }
 
-  async function executeSearch() {
+
+async function executeSearch() {
     let query = document.getElementById('nameInput').value.trim().toLowerCase();
     let toggBox = document.getElementById('suggestions');
     let msgDiv = document.getElementById('loginMessage');
@@ -167,7 +168,10 @@
     
     msgDiv.innerText = "Searching profile registries...";
 
+    // Fetch both datasets upfront for instant side-by-side matching
     let database = await fetchFirebaseData();
+    let waitlist = await fetchWaitlistData();
+
     if (!database) {
       msgDiv.innerText = "Network link failure. Please refresh and retry.";
       msgDiv.className = "status-msg error";
@@ -178,52 +182,70 @@
     let matchesFound = false;
 
     // 1. Search inside Master Registry List
-    Object.keys(database).forEach(key => {
-      let user = database[key];
-      if (user.name && user.name.toLowerCase().indexOf(query) !== -1) {
-        matchesFound = true;
-        toggBox.style.display = "block";
-        let div = document.createElement('div');
-        div.className = 'suggestion-item';
-        div.innerText = user.name;
-        div.onclick = function() {
-          document.getElementById('nameInput').value = user.name;
-          selectedName = user.name;
-          activeUserRecord = user; 
-          toggBox.innerHTML = "";
-          toggBox.style.display = "none";
-          document.getElementById('passwordGroup').style.display = 'block';
-          document.getElementById('changePassBtn').style.display = 'block'; 
-          document.getElementById('loginBtn').style.display = 'block';
-        };
-        toggBox.appendChild(div);
-      }
-    });
+    if (database) {
+      Object.keys(database).forEach(key => {
+        let user = database[key];
+        if (user.name && user.name.toLowerCase().indexOf(query) !== -1) {
+          matchesFound = true;
+          toggBox.style.display = "block";
+          let div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerText = user.name;
+          div.onclick = function() {
+            document.getElementById('nameInput').value = user.name;
+            selectedName = user.name;
+            activeUserRecord = user; 
+            toggBox.innerHTML = "";
+            toggBox.style.display = "none";
+            msgDiv.innerText = ""; // Clear status messages
+            
+            // Show password validation options for Master users
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('changePassBtn').style.display = 'block'; 
+            document.getElementById('loginBtn').style.display = 'block';
+          };
+          suggBox.appendChild(div); // Fallback reference helper
+          if(toggBox) toggBox.appendChild(div);
+        }
+      });
+    }
 
-    // 2. Fallback routing logic to check waitlist
+    // 2. Search inside Waitlist Node (Sheet2)
+    if (waitlist) {
+      Object.keys(waitlist).forEach(key => {
+        let wUser = waitlist[key];
+        if (wUser.name && wUser.name.toLowerCase().indexOf(query) !== -1) {
+          matchesFound = true;
+          toggBox.style.display = "block";
+          let div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerText = wUser.name; // Displays their clean name in the dropdown list
+          div.onclick = function() {
+            document.getElementById('nameInput').value = wUser.name;
+            selectedName = wUser.name;
+            activeUserRecord = null; // Clear master record references
+            toggBox.innerHTML = "";
+            toggBox.style.display = "none";
+            
+            // Show the custom waitlist notification only AFTER they select their name
+            msgDiv.innerText = "You are in Waitlisted List and we will assign Doctor to you in Phase#2";
+            msgDiv.className = "status-msg waitlist-msg"; 
+          };
+          if(toggBox) toggBox.appendChild(div);
+        }
+      });
+    }
+
+    // 3. If completely missing from both registries
     if (!matchesFound) {
-      let waitlist = await fetchWaitlistData();
-      let foundInWaitlist = false;
-
-      if (waitlist) {
-        Object.keys(waitlist).forEach(key => {
-          let wUser = waitlist[key];
-          if (wUser.name && wUser.name.toLowerCase().indexOf(query) !== -1) {
-            foundInWaitlist = true;
-          }
-        });
-      }
-
-      if (foundInWaitlist) {
-        msgDiv.innerText = "You are in Waitlisted List and we will assign Doctor to you in Phase#2";
-        msgDiv.className = "status-msg waitlist-msg"; 
-      } else {
-        msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282.";
-        msgDiv.className = "status-msg error";
-      }
+      msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282";
+      msgDiv.className = "status-msg error";
     }
   }
+  
 
+
+  
   function processLogin() {
     let inputPassword = document.getElementById('passwordInput').value.trim();
     let msgDiv = document.getElementById('loginMessage');
