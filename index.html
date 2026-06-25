@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Physician Wellness Research Study Program</title>
+  <title>User Portal</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -43,6 +43,7 @@
     .dashboard { display: none; }
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .grid-item.hidden-slot { display: none; } /* Hides extra empty boxes initially */
     .grid-item span { display: block; font-size: 12px; color: #1a73e8; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .grid-item strong { word-break: break-all; font-size: 15px; color: #202124; }
     .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; line-height: 1.5; }
@@ -52,8 +53,6 @@
     .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.55); display: none; justify-content: center; align-items: center; z-index: 9999; }
     .modal-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.25); width: 100%; max-width: 450px; box-sizing: border-box; }
     .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
-    
-    /* Instructional password note helper style */
     .password-hint-msg { display: block; font-size: 13px; color: #5f6368; margin-top: 6px; font-weight: 500; line-height: 1.4; }
   </style>
 </head>
@@ -98,11 +97,13 @@
     <div id="readOnlyGrid" class="grid-view"></div>
     <div id="datesGrid" class="grid-view"></div>
     
-    <div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-      <button id="saveDatesBtn">Submit</button>
+    <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+      <button id="saveDatesBtn">Save Changes</button>
+      <button type="button" id="addMoreDatesBtn" class="btn-secondary"><i class="fa-solid fa-plus" style="margin-right: 5px;"></i>Add Another Date</button>
       <button class="btn-secondary" id="logoutBtn">Logout</button>
       <span id="saveStatus" class="status-msg"></span>
     </div>
+    <div id="allDoneMsg" style="display: none; margin-top: 15px; padding: 12px; background-color: #e8f0fe; color: #1a73e8; border-radius: 4px; font-weight: 600; text-align: center;">All 12 Sitting Given Date records have been completed.</div>
   </div>
 </div>
 
@@ -161,8 +162,17 @@
     document.getElementById('closeModalBtn').addEventListener('click', closePasswordModal);
     document.getElementById('submitNewPassBtn').addEventListener('click', submitPasswordChange);
     document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
+    document.getElementById('addMoreDatesBtn').addEventListener('click', exposeNextEmptyDateSlot);
     document.getElementById('logoutBtn').addEventListener('click', logout);
   });
+
+  function getTodayDateString() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   function togglePasswordVisibility(inputId, eyeIcon) {
     const inputField = document.getElementById(inputId);
@@ -177,18 +187,6 @@
     }
   }
 
-// Helper to get today's local date string formatted as YYYY-MM-DD
-function getTodayDateString() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-
-
-  
   async function fetchFirebaseData() {
     if (allUsersCache) return allUsersCache;
     try {
@@ -297,7 +295,7 @@ function getTodayDateString() {
     }
 
     if (!matchesFound) {
-      msgDiv.innerText = "You are not registered for the 'Physician Wellness Research Study' Program.";
+      msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program. Kindly call Br. Vinay Chavda at 9898028282.";
       msgDiv.className = "status-msg error";
       document.getElementById('clearScreenBtn').style.display = 'inline-block';
     }
@@ -335,7 +333,6 @@ function getTodayDateString() {
     document.getElementById('modalNewPass').value = "";
     document.getElementById('modalConfirmPass').value = "";
     document.getElementById('modalError').innerText = "";
-    document.getElementById('modalError').className = "status-msg";
     document.getElementById('passwordModal').style.display = "flex";
   }
   
@@ -354,7 +351,6 @@ function getTodayDateString() {
       errorDiv.className = "status-msg error";
       return;
     }
-    // Ensures length rule is strictly 6 characters
     if(newPass.length !== 6) {
       errorDiv.innerText = "New password must be exactly 6 characters long.";
       errorDiv.className = "status-msg error";
@@ -400,7 +396,7 @@ function getTodayDateString() {
     }
   }
 
-function buildDashboard() {
+  function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
     document.getElementById('welcomeTitle').innerText = "Welcome, " + selectedName;
@@ -410,10 +406,14 @@ function buildDashboard() {
     readOnlyGrid.innerHTML = "";
     datesGrid.innerHTML = "";
     
+    document.getElementById('allDoneMsg').style.display = 'none';
+    document.getElementById('addMoreDatesBtn').style.display = 'inline-block';
+    document.getElementById('saveDatesBtn').style.display = 'inline-block';
+
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
-    // 1. Build Read-Only Grid for Columns A, B, C (Rows 0, 1, 2)
+    // Build Read-Only Grid (Columns A, B, C)
     for (let i = 0; i < 3; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
@@ -423,81 +423,79 @@ function buildDashboard() {
       readOnlyGrid.appendChild(div);
     }
 
-    // 2. Build the Smart Date Input Filter (Columns D to O / Indexes 3 to 14)
+    // Build Interactive Smart Date Elements (Indexes 3 to 14)
     let nextEmptyFound = false;
 
     for (let i = 3; i <= 14; i++) {
       let rawVal = rowValues[i] ? rowValues[i].trim() : "";
       let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 2));
 
+      let div = document.createElement('div');
+      div.className = 'grid-item';
+
       if (rawVal !== "") {
-        // This slot is ALREADY filled. Show it in tiny font text history mode.
-        let div = document.createElement('div');
-        div.className = 'grid-item';
-        div.style.padding = '6px 12px'; // Tighter spacing
-        div.style.background = '#f1f3f4';
-        div.innerHTML = `
-          <span style="font-size: 11px; color: #5f6368;">${title} (Saved)</span>
-          <strong style="font-size: 13px; color: #3c4043;">${rawVal}</strong>
-          <input type="hidden" class="date-input" value="${rawVal}">
-        `;
+        // 1. EARLIER SUBMITTED DATE: Fully editable as requested
+        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
       } else {
-        // This slot is EMPTY.
+        // 2. EMPTY SLOTS
         if (!nextEmptyFound) {
-          // It is the VERY FIRST empty slot available! Render it as the active entry block.
-          let div = document.createElement('div');
-          div.className = 'grid-item';
-          div.style.border = '2px solid #1a73e8'; // Highlight it elegantly
-          div.innerHTML = `
-            <span style="color: #1a73e8; font-weight: bold;">New Entry: ${title}</span>
-            <input type="date" class="date-input" max="${getTodayDateString()}" value="" style="margin-top: 5px; border-color: #1a73e8;">
-          `;
+          // Display the first available empty slot
+          div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
-          nextEmptyFound = true; // Block any subsequent empty fields from generating
+          nextEmptyFound = true;
         } else {
-          // It's a future empty slot. We render a hidden input field so the save script index array positions don't break.
-          let hiddenInput = document.createElement('input');
-          hiddenInput.type = 'hidden';
-          hiddenInput.className = 'date-input';
-          hiddenInput.value = '';
-          datesGrid.appendChild(hiddenInput);
+          // Hide subsequent empty slots so mobile view stays small
+          div.className = 'grid-item hidden-slot';
+          div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
+          datesGrid.appendChild(div);
         }
       }
     }
 
-    // Inform the user elegantly if all 12 entries have already been used up.
-    if (!nextEmptyFound) {
-      let completeDiv = document.createElement('div');
-      completeDiv.style.gridColumn = '1 / -1';
-      completeDiv.style.padding = '12px';
-      completeDiv.style.backgroundColor = '#e8f0fe';
-      completeDiv.style.color = '#1a73e8';
-      completeDiv.style.borderRadius = '4px';
-      completeDiv.style.fontWeight = '600';
-      completeDiv.style.textAlign = 'center';
-      completeDiv.innerText = "All 12 Sitting Given Date records have been completed.";
-      datesGrid.appendChild(completeDiv);
-      
-      // Hide the Save Changes button since there is nothing new to add
-      document.getElementById('saveDatesBtn').style.display = 'none';
-    } else {
-      // Ensure save button is visible if there is an active text box
-      document.getElementById('saveDatesBtn').style.display = 'inline-block';
+    // Adjust visibility elements if all 12 elements are full from start
+    checkIfAllSlotsFilled();
+  }
+
+  // Action function to dynamically show the next hidden blank slot
+  function exposeNextEmptyDateSlot() {
+    let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
+    if (hiddenSlots.length > 0) {
+      // Un-hide the very first available hidden slot
+      hiddenSlots[0].classList.remove('hidden-slot');
+      checkIfAllSlotsFilled();
     }
   }
 
+  function checkIfAllSlotsFilled() {
+    let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
+    // If no more hidden slots remain and all current active text inputs have value
+    if (currentHidden.length === 0) {
+      document.getElementById('addMoreDatesBtn').style.display = 'none';
+      
+      // Let's check if absolutely every input has a value chosen
+      let inputs = document.querySelectorAll('#datesGrid .date-input');
+      let fullyPopulated = true;
+      inputs.forEach(input => { if (input.value === "") fullyPopulated = false; });
+      
+      if (fullyPopulated) {
+        document.getElementById('allDoneMsg').style.display = 'block';
+      }
+    }
+  }
 
   async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     statusSpan.innerText = "Writing instant records...";
     statusSpan.className = "status-msg";
     
-    let dateInputs = document.getElementsByClassName('date-input');
+    let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     let updatedDatesPayload = [];
-    for (let i = 0; i < dateInputs.length; i++) {
-      updatedDatesPayload.push(dateInputs[i].value);
-    }
+    
+    // Extrapolate values linearly sequentially
+    dateInputs.forEach(input => {
+      updatedDatesPayload.push(input.value.trim());
+    });
 
     for(let i=0; i<updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i+3] = updatedDatesPayload[i];
@@ -519,21 +517,18 @@ function buildDashboard() {
         body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
       });
 
-      statusSpan.innerText = "Submitted!";
-      setTimeout(() => { statusSpan.innerText = ""; }, 3000);
+      statusSpan.innerText = "System entries committed to database successfully!";
+      // Re-trigger layout engine to properly filter the newly saved entries on screen
+      setTimeout(() => { 
+        statusSpan.innerText = ""; 
+        buildDashboard(); 
+      }, 1500);
     } catch(err) {
       statusSpan.innerText = "Database sync failed.";
       statusSpan.className = "status-msg error";
     }
   }
 
-
-
-
-
-
-
-  
   function logout() {
     activeUserRecord = null;
     selectedName = "";
