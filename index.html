@@ -128,6 +128,20 @@
       <span class="password-hint-msg"><i class="fa-solid fa-circle-info" style="color: #1a73e8; margin-right: 4px;"></i> New password must be exactly 6 characters. It may contain any letters, digits, and special characters.</span>
     </div>
 
+
+
+
+<div id="customAlertModal" class="modal-backdrop">
+  <div class="modal-box" style="border-top: 4px solid #d93025; max-width: 400px; text-align: center;">
+    <i class="fa-solid fa-circle-exclamation" style="color: #d93025; font-size: 42px; margin-bottom: 15px;"></i>
+    <h3 style="margin-top: 0; color: #202124; font-size: 20px;">Duplicate Entry Detected</h3>
+    <p id="customAlertMessage" style="color: #5f6368; font-size: 15px; line-height: 1.5; margin-bottom: 25px; text-align: left;"></p>
+    <div style="display: flex; justify-content: center;">
+      <button type="button" id="closeCustomAlertBtn" style="background-color: #d93025; padding: 10px 30px; width: 100%;">OK</button>
+    </div>
+  </div>
+</div>
+
     <div class="form-group">
       <label>Confirm New Password</label>
       <div class="eye-wrapper">
@@ -166,6 +180,12 @@
     document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
     document.getElementById('addMoreDatesBtn').addEventListener('click', exposeNextEmptyDateSlot);
     document.getElementById('logoutBtn').addEventListener('click', logout);
+
+document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
+  document.getElementById('customAlertModal').style.display = "none";
+});
+
+
   });
 
   function getTodayDateString() {
@@ -506,17 +526,48 @@
     }
   }
 
-  async function submitDates() {
+
+
+
+
+async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     const saveBtn = document.getElementById('saveDatesBtn');
-    
-    statusSpan.innerText = "Writing instant records...";
-    statusSpan.className = "status-msg";
     
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     let updatedDatesPayload = [];
     
-    // Extrapolate values linearly sequentially
+    // --- VALIDATION INTERLOCK ---
+    let seenDates = new Set();
+    let hasDuplicate = false;
+
+    for (let i = 0; i < dateInputs.length; i++) {
+      let dateValue = dateInputs[i].value.trim();
+      
+      if (dateValue !== "") {
+        if (seenDates.has(dateValue)) {
+          hasDuplicate = true;
+          break; 
+        }
+        seenDates.add(dateValue);
+      }
+    }
+
+    if (hasDuplicate) {
+      statusSpan.innerText = "Submission failed: Duplicate dates detected.";
+      statusSpan.className = "status-msg error";
+      
+      // DISPLAY THE NEW CUSTOM BEAUTIFUL MODAL
+      document.getElementById('customAlertMessage').innerText = "You have entered the same date for more than one sitting. Please ensure every sitting has a unique date.";
+      document.getElementById('customAlertModal').style.display = "flex";
+      
+      return; // Safe exit
+    }
+    // --- END VALIDATION INTERLOCK ---
+
+    statusSpan.innerText = "Writing instant records...";
+    statusSpan.className = "status-msg";
+    
     dateInputs.forEach(input => {
       updatedDatesPayload.push(input.value.trim());
     });
@@ -543,7 +594,6 @@
 
       statusSpan.innerText = "Submitted!!";
 
-      // Set the permanent global variable lock to true
       isSubmitDisabledAfterSave = true;
       
       saveBtn.disabled = true;
@@ -561,6 +611,9 @@
     }
   }
 
+
+
+  
   function logout() {
     isSubmitDisabledAfterSave = false; // Reset lock tracking state completely
     activeUserRecord = null;
