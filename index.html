@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Physician Wellness Research Study Program</title>
+  <title>User Portal</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -39,6 +39,8 @@
     button:hover { background-color: #1557b0; }
     .btn-secondary { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
     .btn-secondary:hover { background-color: #e8eaed; }
+    .btn-danger { background-color: #d93025; color: white; }
+    .btn-danger:hover { background-color: #b31412; }
     
     .dashboard { display: none; }
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -61,7 +63,7 @@
 <div class="container">
   <div id="loginSection">
     <div class="header-row">
-      <h2 style="text-align: center; line-height: 1.4; margin: 10px auto; width: 100%;">Physician Wellness Research Study Program<br>Preceptor Login</h2>
+      <h2 style="text-align: center; line-height: 1.4; margin: 10px auto; width: 100%;">Physician Wellness Research Study Program <br>Preceptor Login</h2>
     </div>
     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin-top: 15px; margin-bottom: 20px;">
 
@@ -88,11 +90,13 @@
     
     <button id="loginBtn" style="display:none; margin-top: 20px; width: 100%;">Login</button>
     <div id="loginMessage" class="status-msg"></div>
+    
+    <button id="resetPassBtn" class="btn-secondary btn-danger" style="display:none; margin-top: 12px; width: 100%; font-size: 14px; padding: 10px 20px;"><i class="fa-solid fa-rotate-left" style="margin-right: 6px;"></i>Forgot Password? Reset to 123456</button>
   </div>
 
   <div id="dashboardSection" class="dashboard">
     <h2 id="welcomeTitle">Welcome</h2>
-    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please verify your name and the name of the doctor assigned to you, and then submit the date of the sitting you have given.</p>
+    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please verify your name and name of the Doctor assinged to you and then update sitting given date</p>
     
     <div id="readOnlyGrid" class="grid-view"></div>
     <div id="datesGrid" class="grid-view"></div>
@@ -127,20 +131,6 @@
       </div>
       <span class="password-hint-msg"><i class="fa-solid fa-circle-info" style="color: #1a73e8; margin-right: 4px;"></i> New password must be exactly 6 characters. It may contain any letters, digits, and special characters.</span>
     </div>
-
-
-
-
-<div id="customAlertModal" class="modal-backdrop">
-  <div class="modal-box" style="border-top: 4px solid #d93025; max-width: 400px; text-align: center;">
-    <i class="fa-solid fa-circle-exclamation" style="color: #d93025; font-size: 42px; margin-bottom: 15px;"></i>
-    <h3 style="margin-top: 0; color: #202124; font-size: 20px;">Duplicate Entry Detected</h3>
-    <p id="customAlertMessage" style="color: #5f6368; font-size: 15px; line-height: 1.5; margin-bottom: 25px; text-align: left;"></p>
-    <div style="display: flex; justify-content: center;">
-      <button type="button" id="closeCustomAlertBtn" style="background-color: #d93025; padding: 10px 30px; width: 100%;">OK</button>
-    </div>
-  </div>
-</div>
 
     <div class="form-group">
       <label>Confirm New Password</label>
@@ -180,12 +170,7 @@
     document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
     document.getElementById('addMoreDatesBtn').addEventListener('click', exposeNextEmptyDateSlot);
     document.getElementById('logoutBtn').addEventListener('click', logout);
-
-document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
-  document.getElementById('customAlertModal').style.display = "none";
-});
-
-
+    document.getElementById('resetPassBtn').addEventListener('click', handleSimplePasswordReset);
   });
 
   function getTodayDateString() {
@@ -243,6 +228,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
     document.getElementById('passwordGroup').style.display = 'none';
     document.getElementById('loginBtn').style.display = 'none';
     document.getElementById('clearScreenBtn').style.display = 'none';
+    document.getElementById('resetPassBtn').style.display = 'none';
     msgDiv.innerText = "";
     msgDiv.className = "status-msg";
     
@@ -251,7 +237,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
       return;
     }
     
-    msgDiv.innerText = "Searching Preceptor Name ....";
+    msgDiv.innerText = "Searching profile registries...";
 
     let database = await fetchFirebaseData();
     let waitlist = await fetchWaitlistData();
@@ -285,6 +271,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
             document.getElementById('passwordGroup').style.display = 'block';
             document.getElementById('loginBtn').style.display = 'block';
             document.getElementById('clearScreenBtn').style.display = 'none';
+            document.getElementById('resetPassBtn').style.display = 'none';
           };
           if(toggBox) toggBox.appendChild(div);
         }
@@ -310,6 +297,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
             msgDiv.innerText = "You are currently on the waitlist. We will assign a physician to you from July 20th onwards (Group #2).";
             msgDiv.className = "status-msg waitlist-msg"; 
             document.getElementById('clearScreenBtn').style.display = 'inline-block';
+            document.getElementById('resetPassBtn').style.display = 'none';
           };
           if(toggBox) toggBox.appendChild(div);
         }
@@ -320,6 +308,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
       msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program.";
       msgDiv.className = "status-msg error";
       document.getElementById('clearScreenBtn').style.display = 'inline-block';
+      document.getElementById('resetPassBtn').style.display = 'none';
     }
   }
 
@@ -327,6 +316,7 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
     document.getElementById('nameInput').value = "";
     document.getElementById('loginMessage').innerText = "";
     document.getElementById('clearScreenBtn').style.display = 'none';
+    document.getElementById('resetPassBtn').style.display = 'none';
     activeUserRecord = null;
     selectedName = "";
   }
@@ -343,10 +333,58 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
 
     if (activeUserRecord.password === inputPassword) {
       msgDiv.innerText = "";
+      document.getElementById('resetPassBtn').style.display = 'none';
       buildDashboard();
     } else {
       msgDiv.innerText = "Incorrect password.";
       msgDiv.className = "status-msg error";
+      // Reveal the simple reset button if the password entry fails
+      document.getElementById('resetPassBtn').style.display = 'block';
+    }
+  }
+
+  // Simple automated password reset deployment strategy
+  async function handleSimplePasswordReset() {
+    let msgDiv = document.getElementById('loginMessage');
+    if (!activeUserRecord) return;
+
+    msgDiv.innerText = "Resetting infrastructure key to default configuration...";
+    msgDiv.className = "status-msg";
+    document.getElementById('resetPassBtn').style.display = 'none';
+
+    const defaultPass = "123456";
+    let nodeKey = "row_" + activeUserRecord.rowNumber;
+    let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
+
+    try {
+      // 1. Commit fallback parameters to database node
+      await fetch(patchUrl, {
+        method: "PATCH",
+        body: JSON.stringify({ password: defaultPass })
+      });
+
+      // 2. Commit fallback parameter stream to Google Spreadsheet
+      fetch(googleScriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: defaultPass } })
+      });
+
+      // 3. Sync memory caches locally
+      activeUserRecord.password = defaultPass;
+      if (allUsersCache && allUsersCache[nodeKey]) {
+        allUsersCache[nodeKey].password = defaultPass;
+      }
+
+      msgDiv.innerText = "Password successfully reset to 123456! You can login now.";
+      msgDiv.className = "status-msg";
+      document.getElementById('passwordInput').value = defaultPass;
+    } catch (err) {
+      console.error(err);
+      msgDiv.innerText = "Reset execution synchronization conflict.";
+      msgDiv.className = "status-msg error";
+      document.getElementById('resetPassBtn').style.display = 'block';
     }
   }
 
@@ -411,6 +449,12 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
 
       errorDiv.innerText = "Security records updated successfully!";
       document.getElementById('passwordInput').value = newPass;
+      
+      // Keep cache updated if they reset then try to login later
+      if (allUsersCache && allUsersCache[nodeKey]) {
+        allUsersCache[nodeKey].password = newPass;
+      }
+
       setTimeout(() => { closePasswordModal(); }, 1200);
     } catch(e) {
       errorDiv.innerText = "Sync conflict detected.";
@@ -507,7 +551,6 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
     }
   }
 
-  // Missing function added here! It safely opens a new box and unlocks the submit button.
   function exposeNextEmptyDateSlot() {
     let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     if (hiddenSlots.length > 0) {
@@ -526,48 +569,17 @@ document.getElementById('closeCustomAlertBtn').addEventListener('click', () => {
     }
   }
 
-
-
-
-
-async function submitDates() {
+  async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     const saveBtn = document.getElementById('saveDatesBtn');
+    
+    statusSpan.innerText = "Writing instant records...";
+    statusSpan.className = "status-msg";
     
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     let updatedDatesPayload = [];
     
-    // --- VALIDATION INTERLOCK ---
-    let seenDates = new Set();
-    let hasDuplicate = false;
-
-    for (let i = 0; i < dateInputs.length; i++) {
-      let dateValue = dateInputs[i].value.trim();
-      
-      if (dateValue !== "") {
-        if (seenDates.has(dateValue)) {
-          hasDuplicate = true;
-          break; 
-        }
-        seenDates.add(dateValue);
-      }
-    }
-
-    if (hasDuplicate) {
-      statusSpan.innerText = "Submission failed: Duplicate dates detected.";
-      statusSpan.className = "status-msg error";
-      
-      // DISPLAY THE NEW CUSTOM BEAUTIFUL MODAL
-      document.getElementById('customAlertMessage').innerText = "You have entered the same date for more than one sitting. Please ensure every sitting has a unique date.";
-      document.getElementById('customAlertModal').style.display = "flex";
-      
-      return; // Safe exit
-    }
-    // --- END VALIDATION INTERLOCK ---
-
-    statusSpan.innerText = "Writing instant records...";
-    statusSpan.className = "status-msg";
-    
+    // Extrapolate values linearly sequentially
     dateInputs.forEach(input => {
       updatedDatesPayload.push(input.value.trim());
     });
@@ -594,6 +606,7 @@ async function submitDates() {
 
       statusSpan.innerText = "Submitted!!";
 
+      // Set the permanent global variable lock to true
       isSubmitDisabledAfterSave = true;
       
       saveBtn.disabled = true;
@@ -611,9 +624,6 @@ async function submitDates() {
     }
   }
 
-
-
-  
   function logout() {
     isSubmitDisabledAfterSave = false; // Reset lock tracking state completely
     activeUserRecord = null;
@@ -626,6 +636,7 @@ async function submitDates() {
     document.getElementById('dashboardSection').style.display = 'none';
     document.getElementById('loginSection').style.display = 'block';
     document.getElementById('loginMessage').innerText = "";
+    document.getElementById('resetPassBtn').style.display = 'none';
   }
 </script>
 </body>
