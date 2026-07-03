@@ -172,7 +172,7 @@
   let activeUserRecord = null;
   let selectedName = "";
 
-  let isSubmitDisabledAfterSave = false; // Tracks if we are locking the button post-submit
+  let isSubmitDisabledAfterSave = false; 
 
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchSubmitBtn').addEventListener('click', executeSearch);
@@ -186,7 +186,6 @@
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('resetPassBtn').addEventListener('click', handleSimplePasswordReset);
     
-    // Listen for client status selection changes natively to run dynamic rules
     document.getElementById('currentStatusSelect').addEventListener('change', runDynamicStatusLockingRule);
   });
 
@@ -488,12 +487,11 @@
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
-    // Apply header text dynamically from Sheet Column D
+    // Fixed Mapping: Sheet Column D is Index 3
     if (headers[3]) {
       document.getElementById('statusLabel').innerText = headers[3];
     }
 
-    // Set Saved Selection State for Dropdown (Index 3 corresponds to Column D)
     let savedStatus = (rowValues[3] && rowValues[3].trim() !== "") ? rowValues[3].trim() : "Active";
     document.getElementById('currentStatusSelect').value = savedStatus;
 
@@ -507,26 +505,21 @@
       readOnlyGrid.appendChild(div);
     }
 
-    // Determine lock conditions
     let isStatusWithdrawn = (savedStatus !== "Active");
-
-    // Build Interactive Smart Date Elements (Columns E to P -> Indexes 4 to 15)
     let nextEmptyFound = false;
 
+    // FIXED LOOP MAPPING: Dates are Indexes 4 to 15 (Columns E to P)
     for (let i = 4; i <= 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i].trim() : "";
-      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 3));
+      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 3)); // Fixed text offset label math!
 
       let div = document.createElement('div');
       div.className = 'grid-item';
 
       if (rawVal !== "") {
-        // PREVIOUSLY ENTERED DATES: Rendered normally
         div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
       } else {
-        // EMPTY SLOTS:
-        // Hide future blanks entirely if the profile status is non-active or the button is explicitly locked post-save
         if (!nextEmptyFound && !isSubmitDisabledAfterSave && !isStatusWithdrawn) {
           div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
@@ -539,11 +532,9 @@
       }
     }
 
-    // Run custom dynamic toggle updates to block inputs or configure correct button states
     runDynamicStatusLockingRule();
   }
 
-  // Pure state tracker validation logic function
   function runDynamicStatusLockingRule() {
     let selectedStatus = document.getElementById('currentStatusSelect').value;
     let isNotActive = (selectedStatus !== "Active");
@@ -553,29 +544,24 @@
     const addMoreBtn = document.getElementById('addMoreDatesBtn');
 
     if (isNotActive) {
-      // Rule implementation: freeze all date nodes if anything other than default "Active" is selected
       allDateInputs.forEach(input => {
         input.disabled = true;
         input.style.backgroundColor = "#e9ecef";
         input.style.cursor = "not-allowed";
       });
       
-      // Hide further input triggers
       addMoreBtn.style.display = 'none';
       
-      // Submit remains functional to upload the changed dropdown status
       saveBtn.disabled = false;
       saveBtn.style.opacity = "1";
       saveBtn.style.cursor = "pointer";
     } else {
-      // Revert lock condition rules to editable mode
       allDateInputs.forEach(input => {
         input.disabled = false;
         input.style.backgroundColor = "white";
         input.style.cursor = "auto";
       });
 
-      // Manage Submit Button configurations based on whether the action was freshly saved or not
       if (isSubmitDisabledAfterSave) {
         saveBtn.disabled = true;
         saveBtn.style.opacity = "0.5";
@@ -592,7 +578,7 @@
     
   function checkIfAllSlotsFilled() {
     let selectedStatus = document.getElementById('currentStatusSelect').value;
-    if (selectedStatus !== "Active") return; // Keep visibility rules frozen if non-active
+    if (selectedStatus !== "Active") return; 
 
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     if (currentHidden.length === 0) {
@@ -632,19 +618,18 @@
     statusSpan.innerText = "Writing instant records...";
     statusSpan.className = "status-msg";
     
-    // 1. Gather values from UI elements
     let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     
-    // 2. Map structural array payloads safely back to local cache model values
-    activeUserRecord.rowData[3] = selectedStatusValue; // Save Status at Column D Index 3
+    // Save Status to local record cache at structural index 3 (Column D)
+    activeUserRecord.rowData[3] = selectedStatusValue; 
 
     let updatedDatesPayload = [];
     dateInputs.forEach(input => {
       updatedDatesPayload.push(input.value.trim());
     });
 
-    // Dates map to payload array index starting at 4 (Column E)
+    // Save Dates starting back at structural index 4 (Column E)
     for(let i = 0; i < updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
     }
@@ -653,14 +638,13 @@
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
-      // Patch Realtime Database Node Engine
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
 
-      // Assemble payload to match your Google Sheet code logic
-      // Passing structural rows cleanly downstream
+      // Crucial: The combined payload array puts Status first, followed by the dates. 
+      // This tells your Apps Script backend to map Status to Column D, and the dates to E, F, G, etc.
       let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
 
       fetch(googleScriptUrl, {
