@@ -12,9 +12,6 @@
     .header-row { display: block; text-align: center; }
     h2 { color: #1a73e8; margin: 0; }
     
-    .btn-link { background: transparent !important; border: none !important; color: #1a73e8; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 4px 0; transition: color 0.15s ease; outline: none; }
-    .btn-link:hover { color: #1557b0 !important; text-decoration: underline !important; }
-
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
     
@@ -38,6 +35,7 @@
     
     button { background-color: #1a73e8; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
     button:hover { background-color: #1557b0; }
+    button:disabled { background-color: #ccc !important; color: #666 !important; cursor: not-allowed !important; opacity: 0.6 !important; }
     .btn-secondary { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
     .btn-secondary:hover { background-color: #e8eaed; }
     .btn-danger { background-color: #d93025; color: white; }
@@ -143,7 +141,7 @@
         <input type="password" id="modalNewPass" maxlength="6" placeholder="Enter new password">
         <i class="fa-solid fa-eye toggle-password-eye" onclick="togglePasswordVisibility('modalNewPass', this)"></i>
       </div>
-      <span class="password-hint-msg"><i class="fa-solid fa-circle-info" style="color: #1a73e8; margin-right: 4px;"></i> New password must be exactly 6 characters. It may contain any letters, digits, and special characters.</span>
+      <span class="password-hint-msg"><i class="fa-solid fa-circle-info" style="color: #1a73e8; margin-right: 4px;"></i> New password must be exactly 6 characters.</span>
     </div>
 
     <div class="form-group">
@@ -163,7 +161,6 @@
 </div>
 
 <script>
-  // NOTE: If you changed your deployment web app URL in Apps Script Step 1, paste it here!
   const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec"; 
   const firebaseDbUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users.json";
   const firebaseWaitlistUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/waitlist.json";
@@ -299,7 +296,7 @@
             toggBox.innerHTML = "";
             toggBox.style.display = "none";
             
-            msgDiv.innerText = "You are currently on the waitlist. We will assign a physician to you from July 20th onwards (Group #2).";
+            msgDiv.innerText = "You are currently on the waitlist. We will assign a physician to you from July 20th onwards.";
             msgDiv.className = "status-msg waitlist-msg"; 
             document.getElementById('clearScreenBtn').style.display = 'inline-block';
           };
@@ -309,7 +306,7 @@
     }
 
     if (!matchesFound) {
-      msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program.";
+      msgDiv.innerText = "You are not registered for the Program.";
       msgDiv.className = "status-msg error";
       document.getElementById('clearScreenBtn').style.display = 'inline-block';
     }
@@ -330,7 +327,6 @@
     
     if (!activeUserRecord) return;
 
-    // LOCKED ON INDEX 52 (COLUMN BA)
     let actualStoredPassword = activeUserRecord.password || activeUserRecord.rowData[52] || "";
 
     if (actualStoredPassword === inputPassword) {
@@ -348,7 +344,7 @@
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
 
-    msgDiv.innerText = "Resetting password key in Column BA...";
+    msgDiv.innerText = "Resetting password key...";
     msgDiv.className = "status-msg";
     document.getElementById('resetPassBtn').style.display = 'none';
 
@@ -356,7 +352,6 @@
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
-    // LOCKED ON INDEX 52 (COLUMN BA)
     activeUserRecord.rowData[52] = defaultPass; 
 
     try {
@@ -409,7 +404,6 @@
     let confirmPass = document.getElementById('modalConfirmPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
-    // LOCKED ON INDEX 52 (COLUMN BA)
     let currentActualPass = activeUserRecord.password || activeUserRecord.rowData[52] || "";
 
     if(!oldPass || !newPass || !confirmPass) {
@@ -433,11 +427,10 @@
       return;
     }
     
-    errorDiv.innerText = "Updating secure record registry...";
+    errorDiv.innerText = "Updating records...";
     errorDiv.className = "status-msg";
 
     activeUserRecord.password = newPass;
-    // LOCKED ON INDEX 52 (COLUMN BA)
     activeUserRecord.rowData[52] = newPass;
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
@@ -488,8 +481,16 @@
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
+    // Read initial status from data index 3 (Column D)
     let savedStatus = (rowValues[3] && rowValues[3].trim() !== "") ? rowValues[3].trim() : "Active";
     document.getElementById('currentStatusSelect').value = savedStatus;
+
+    // Reset temporary session submission locks if the status stored is Active
+    if (savedStatus === "Active") {
+      isSubmitDisabledAfterSave = false;
+    } else {
+      isSubmitDisabledAfterSave = true; // Lock down if status loaded is inactive
+    }
 
     for (let i = 0; i < 3; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
@@ -537,16 +538,23 @@
     const addMoreBtn = document.getElementById('addMoreDatesBtn');
 
     if (isNotActive) {
+      // CRITICAL FIX: Lock date inputs, hide Add More button, and block Submit if it's already an inactive status on record load
       allDateInputs.forEach(input => {
         input.disabled = true;
         input.style.backgroundColor = "#e9ecef";
         input.style.cursor = "not-allowed";
       });
       addMoreBtn.style.display = 'none';
-      saveBtn.disabled = false;
-      saveBtn.style.opacity = "1";
-      saveBtn.style.cursor = "pointer";
+      
+      if (activeUserRecord && activeUserRecord.rowData[3] !== "Active" && activeUserRecord.rowData[3] === selectedStatus) {
+        // If this non-active status is already saved in the database, lock down the submit button too
+        saveBtn.disabled = true;
+      } else {
+        // If the user just toggled it in this session, keep submit enabled so they can submit the status change
+        saveBtn.disabled = false;
+      }
     } else {
+      // Status is Active
       allDateInputs.forEach(input => {
         input.disabled = false;
         input.style.backgroundColor = "white";
@@ -555,12 +563,8 @@
 
       if (isSubmitDisabledAfterSave) {
         saveBtn.disabled = true;
-        saveBtn.style.opacity = "0.5";
-        saveBtn.style.cursor = "not-allowed";
       } else {
         saveBtn.disabled = false;
-        saveBtn.style.opacity = "1";
-        saveBtn.style.cursor = "pointer";
       }
       checkIfAllSlotsFilled();
     }
@@ -589,8 +593,6 @@
       hiddenSlots[0].classList.remove('hidden-slot');
       const saveBtn = document.getElementById('saveDatesBtn');
       saveBtn.disabled = false;
-      saveBtn.style.opacity = "1";
-      saveBtn.style.cursor = "pointer";
       checkIfAllSlotsFilled();
     }
   }
@@ -603,6 +605,7 @@
     let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     
+    // Update local data and Firebase rowData reference cache at index 3 (Column D)
     activeUserRecord.rowData[3] = selectedStatusValue; 
 
     let updatedDatesPayload = [];
@@ -621,6 +624,7 @@
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
 
+      // Construct a unified list array: [status, date1, date2, ...]
       let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
 
       fetch(googleScriptUrl, {
@@ -634,10 +638,11 @@
         })
       });
 
-      statusSpan.innerText = "Submitted!!";
-      isSubmitDisabledAfterSave = true;
-      saveBtn.disabled = true;
-      saveBtn.style.opacity = "0.5";
+      statusSpan.innerText = "Submitted Successfully!!";
+      
+      if (selectedStatusValue !== "Active") {
+        isSubmitDisabledAfterSave = true;
+      }
 
       setTimeout(() => { buildDashboard(); statusSpan.innerText = ""; }, 1500);
     } catch(err) {
