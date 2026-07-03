@@ -171,7 +171,6 @@
   let waitlistCache = null;
   let activeUserRecord = null;
   let selectedName = "";
-
   let isSubmitDisabledAfterSave = false; 
 
   window.addEventListener('DOMContentLoaded', () => {
@@ -191,22 +190,17 @@
 
   function getTodayDateString() {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   }
 
   function togglePasswordVisibility(inputId, eyeIcon) {
     const inputField = document.getElementById(inputId);
     if (inputField.type === "password") {
       inputField.type = "text";
-      eyeIcon.classList.remove("fa-eye");
-      eyeIcon.classList.add("fa-eye-slash");
+      eyeIcon.classList.replace("fa-eye", "fa-eye-slash");
     } else {
       inputField.type = "password";
-      eyeIcon.classList.remove("fa-eye-slash");
-      eyeIcon.classList.add("fa-eye");
+      eyeIcon.classList.replace("fa-eye-slash", "fa-eye");
     }
   }
 
@@ -217,7 +211,7 @@
       allUsersCache = await response.json();
       return allUsersCache;
     } catch (err) {
-      console.error("Firebase master fetch error:", err);
+      console.error(err);
       return null;
     }
   }
@@ -229,7 +223,6 @@
       waitlistCache = await response.json();
       return waitlistCache;
     } catch (err) {
-      console.error("Firebase waitlist fetch error:", err);
       return null;
     }
   }
@@ -246,7 +239,6 @@
     document.getElementById('clearScreenBtn').style.display = 'none';
     document.getElementById('resetPassBtn').style.display = 'none';
     msgDiv.innerText = "";
-    msgDiv.className = "status-msg";
     
     if (query.length < 3) {
       alert("Please type at least 3 characters to search.");
@@ -254,7 +246,6 @@
     }
     
     msgDiv.innerText = "Searching profile registries...";
-
     let database = await fetchFirebaseData();
     let waitlist = await fetchWaitlistData();
 
@@ -282,14 +273,11 @@
             activeUserRecord = user; 
             toggBox.innerHTML = "";
             toggBox.style.display = "none";
-            msgDiv.innerText = ""; 
             
             document.getElementById('passwordGroup').style.display = 'block';
             document.getElementById('loginBtn').style.display = 'block';
-            document.getElementById('clearScreenBtn').style.display = 'none';
-            document.getElementById('resetPassBtn').style.display = 'none';
           };
-          if(toggBox) toggBox.appendChild(div);
+          toggBox.appendChild(div);
         }
       });
     }
@@ -313,9 +301,8 @@
             msgDiv.innerText = "You are currently on the waitlist. We will assign a physician to you from July 20th onwards (Group #2).";
             msgDiv.className = "status-msg waitlist-msg"; 
             document.getElementById('clearScreenBtn').style.display = 'inline-block';
-            document.getElementById('resetPassBtn').style.display = 'none';
           };
-          if(toggBox) toggBox.appendChild(div);
+          toggBox.appendChild(div);
         }
       });
     }
@@ -324,7 +311,6 @@
       msgDiv.innerText = "You are not registered for the \"Physician Wellness Research Study\" Program.";
       msgDiv.className = "status-msg error";
       document.getElementById('clearScreenBtn').style.display = 'inline-block';
-      document.getElementById('resetPassBtn').style.display = 'none';
     }
   }
 
@@ -341,13 +327,12 @@
     let inputPassword = document.getElementById('passwordInput').value.trim();
     let msgDiv = document.getElementById('loginMessage');
     
-    if (!activeUserRecord) {
-      msgDiv.innerText = "Please select a verified name first.";
-      msgDiv.className = "status-msg error";
-      return;
-    }
+    if (!activeUserRecord) return;
 
-    if (activeUserRecord.password === inputPassword) {
+    // CHANGED: Fixed reference index to read password from Column BA (Index 52)
+    let actualStoredPassword = activeUserRecord.password || activeUserRecord.rowData[52] || "";
+
+    if (actualStoredPassword === inputPassword) {
       msgDiv.innerText = "";
       document.getElementById('resetPassBtn').style.display = 'none';
       buildDashboard();
@@ -362,7 +347,7 @@
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
 
-    msgDiv.innerText = "Resetting infrastructure key to default configuration...";
+    msgDiv.innerText = "Resetting password key in Column BA...";
     msgDiv.className = "status-msg";
     document.getElementById('resetPassBtn').style.display = 'none';
 
@@ -370,30 +355,36 @@
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
+    // CHANGED: Write reset password configuration directly to index 52 (Column BA)
+    activeUserRecord.rowData[52] = defaultPass; 
+
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: defaultPass })
+        body: JSON.stringify({ password: defaultPass, rowData: activeUserRecord.rowData })
       });
 
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: defaultPass } })
+        body: JSON.stringify({ 
+          action: "updatePassword", 
+          rowNumber: activeUserRecord.rowNumber, 
+          payload: { newPassword: defaultPass } 
+        })
       });
 
       activeUserRecord.password = defaultPass;
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = defaultPass;
+        allUsersCache[nodeKey].rowData[52] = defaultPass;
       }
 
       msgDiv.innerText = "Password successfully reset to 123456! You can login now.";
-      msgDiv.className = "status-msg";
       document.getElementById('passwordInput').value = defaultPass;
     } catch (err) {
-      console.error(err);
-      msgDiv.innerText = "Reset execution synchronization conflict.";
+      msgDiv.innerText = "Reset sync conflict occurred.";
       msgDiv.className = "status-msg error";
       document.getElementById('resetPassBtn').style.display = 'block';
     }
@@ -417,6 +408,9 @@
     let confirmPass = document.getElementById('modalConfirmPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
+    // CHANGED: Read securely from Column BA (Index 52)
+    let currentActualPass = activeUserRecord.password || activeUserRecord.rowData[52] || "";
+
     if(!oldPass || !newPass || !confirmPass) {
       errorDiv.innerText = "Please complete all password fields.";
       errorDiv.className = "status-msg error";
@@ -428,34 +422,40 @@
       return;
     }
     if(newPass !== confirmPass) {
-      errorDiv.innerText = "New Password and Confirm Password do not match.";
+      errorDiv.innerText = "Passwords do not match.";
       errorDiv.className = "status-msg error";
       return;
     }
-    if(oldPass !== activeUserRecord.password) {
+    if(oldPass !== currentActualPass) {
       errorDiv.innerText = "Current verified password incorrect.";
       errorDiv.className = "status-msg error";
       return;
     }
     
-    errorDiv.innerText = "Syncing across infrastructure nodes...";
+    errorDiv.innerText = "Updating secure record registry...";
     errorDiv.className = "status-msg";
 
     activeUserRecord.password = newPass;
+    // CHANGED: Update mapping tracking inside local data array at index 52
+    activeUserRecord.rowData[52] = newPass;
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: newPass })
+        body: JSON.stringify({ password: newPass, rowData: activeUserRecord.rowData })
       });
 
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: newPass } })
+        body: JSON.stringify({ 
+          action: "updatePassword", 
+          rowNumber: activeUserRecord.rowNumber, 
+          payload: { newPassword: newPass } 
+        })
       });
 
       errorDiv.innerText = "Security records updated successfully!";
@@ -463,11 +463,12 @@
       
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = newPass;
+        allUsersCache[nodeKey].rowData[52] = newPass;
       }
 
       setTimeout(() => { closePasswordModal(); }, 1200);
     } catch(e) {
-      errorDiv.innerText = "Sync conflict detected.";
+      errorDiv.innerText = "Sync configuration conflict.";
       errorDiv.className = "status-msg error";
     }
   }
@@ -481,17 +482,14 @@
     let datesGrid = document.getElementById('datesGrid');
     readOnlyGrid.innerHTML = "";
     datesGrid.innerHTML = "";
-    
     document.getElementById('allDoneMsg').style.display = 'none';
 
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
-    // Fixed Selection: Read status value safely from structural index 3 (Column D)
     let savedStatus = (rowValues[3] && rowValues[3].trim() !== "") ? rowValues[3].trim() : "Active";
     document.getElementById('currentStatusSelect').value = savedStatus;
 
-    // Build Read-Only Grid (Columns A, B, C -> Indexes 0, 1, 2)
     for (let i = 0; i < 3; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
@@ -504,11 +502,8 @@
     let isStatusWithdrawn = (savedStatus !== "Active");
     let nextEmptyFound = false;
 
-    // FIXED LOOP MAPPING: Dates run from index 4 to 15 (Columns E to P)
     for (let i = 4; i <= 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i].trim() : "";
-      
-      // Look up headers dynamically starting at index 4 for dates, fallback cleanly if empty
       let title = (headers[i] && headers[i].trim() !== "") ? headers[i] : ("Sitting Given Date #" + (i - 3));
 
       let div = document.createElement('div');
@@ -536,7 +531,6 @@
   function runDynamicStatusLockingRule() {
     let selectedStatus = document.getElementById('currentStatusSelect').value;
     let isNotActive = (selectedStatus !== "Active");
-    
     let allDateInputs = document.querySelectorAll('#datesGrid .date-input');
     const saveBtn = document.getElementById('saveDatesBtn');
     const addMoreBtn = document.getElementById('addMoreDatesBtn');
@@ -547,9 +541,7 @@
         input.style.backgroundColor = "#e9ecef";
         input.style.cursor = "not-allowed";
       });
-      
       addMoreBtn.style.display = 'none';
-      
       saveBtn.disabled = false;
       saveBtn.style.opacity = "1";
       saveBtn.style.cursor = "pointer";
@@ -569,7 +561,6 @@
         saveBtn.style.opacity = "1";
         saveBtn.style.cursor = "pointer";
       }
-
       checkIfAllSlotsFilled();
     }
   }
@@ -581,14 +572,10 @@
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     if (currentHidden.length === 0) {
       document.getElementById('addMoreDatesBtn').style.display = 'none';
-      
       let inputs = document.querySelectorAll('#datesGrid .date-input');
       let fullyPopulated = true;
       inputs.forEach(input => { if (input.value === "") fullyPopulated = false; });
-      
-      if (fullyPopulated) {
-        document.getElementById('allDoneMsg').style.display = 'block';
-      }
+      if (fullyPopulated) document.getElementById('allDoneMsg').style.display = 'block';
     } else {
       document.getElementById('addMoreDatesBtn').style.display = 'inline-block';
     }
@@ -599,12 +586,10 @@
     if (hiddenSlots.length > 0) {
       isSubmitDisabledAfterSave = false;
       hiddenSlots[0].classList.remove('hidden-slot');
-      
       const saveBtn = document.getElementById('saveDatesBtn');
       saveBtn.disabled = false;
       saveBtn.style.opacity = "1";
       saveBtn.style.cursor = "pointer";
-      
       checkIfAllSlotsFilled();
     }
   }
@@ -612,9 +597,7 @@
   async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     const saveBtn = document.getElementById('saveDatesBtn');
-    
-    statusSpan.innerText = "Writing instant records...";
-    statusSpan.className = "status-msg";
+    statusSpan.innerText = "Writing records...";
     
     let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
@@ -622,9 +605,7 @@
     activeUserRecord.rowData[3] = selectedStatusValue; 
 
     let updatedDatesPayload = [];
-    dateInputs.forEach(input => {
-      updatedDatesPayload.push(input.value.trim());
-    });
+    dateInputs.forEach(input => { updatedDatesPayload.push(input.value.trim()); });
 
     for(let i = 0; i < updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
@@ -654,16 +635,10 @@
 
       statusSpan.innerText = "Submitted!!";
       isSubmitDisabledAfterSave = true;
-      
       saveBtn.disabled = true;
       saveBtn.style.opacity = "0.5";
-      saveBtn.style.cursor = "not-allowed";
 
-      setTimeout(() => { 
-        buildDashboard(); 
-        statusSpan.innerText = ""; 
-      }, 1500);
-      
+      setTimeout(() => { buildDashboard(); statusSpan.innerText = ""; }, 1500);
     } catch(err) {
       statusSpan.innerText = "Database sync failed.";
       statusSpan.className = "status-msg error";
