@@ -18,8 +18,9 @@
     .form-group { margin-bottom: 20px; position: relative; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #5f6368; }
     
-    input[type="text"], input[type="password"], input[type="date"] { width: 100%; padding: 12px; padding-right: 40px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; }
-    input:focus { border-color: #1a73e8; outline: none; }
+    input[type="text"], input[type="password"], input[type="date"], select { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; background-color: white; }
+    input[type="text"], input[type="password"], input[type="date"] { padding-right: 40px; }
+    input:focus, select:focus { border-color: #1a73e8; outline: none; }
     
     .password-row { display: flex; gap: 12px; align-items: center; }
     .password-row .eye-wrapper { flex: 1; position: relative; }
@@ -43,9 +44,10 @@
     .btn-danger:hover { background-color: #b31412; }
     
     .dashboard { display: none; }
+    .status-section { background: #f8f9fa; padding: 15px; border: 1px solid #dadce0; border-radius: 6px; margin-bottom: 25px; }
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
-    .grid-item.hidden-slot { display: none; } /* Hides extra empty boxes initially */
+    .grid-item.hidden-slot { display: none; }
     .grid-item span { display: block; font-size: 12px; color: #1a73e8; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .grid-item strong { word-break: break-all; font-size: 15px; color: #202124; }
     .status-msg { margin-top: 15px; font-weight: bold; color: #1e7e34; line-height: 1.5; }
@@ -96,9 +98,21 @@
 
   <div id="dashboardSection" class="dashboard">
     <h2 id="welcomeTitle">Welcome</h2>
-    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please verify your name and name of the Doctor assinged to you and then update sitting given date</p>
+    <p style="color: #5f6368; font-size: 16px; margin-bottom: 25px; font-weight: 500;">Please verify your name and name of the Doctor assigned to you and then update sitting given date</p>
     
     <div id="readOnlyGrid" class="grid-view"></div>
+
+    <div class="status-section">
+      <label for="currentStatusSelect" id="statusLabel" style="font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: block; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Current Status</label>
+      <select id="currentStatusSelect">
+        <option value="Active">Active</option>
+        <option value="Sitting not started because Dr not responding">Sitting not started because Dr not responding</option>
+        <option value="Dr wants to withdraw">Dr wants to withdraw</option>
+        <option value="I want to withdraw">I want to withdraw</option>
+        <option value="Dr is already abhyasi">Dr is already abhyasi</option>
+      </select>
+    </div>
+    
     <div id="datesGrid" class="grid-view"></div>
     
     <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
@@ -171,6 +185,9 @@
     document.getElementById('addMoreDatesBtn').addEventListener('click', exposeNextEmptyDateSlot);
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('resetPassBtn').addEventListener('click', handleSimplePasswordReset);
+    
+    // Listen for client status selection changes natively to run dynamic rules
+    document.getElementById('currentStatusSelect').addEventListener('change', runDynamicStatusLockingRule);
   });
 
   function getTodayDateString() {
@@ -338,12 +355,10 @@
     } else {
       msgDiv.innerText = "Incorrect password.";
       msgDiv.className = "status-msg error";
-      // Reveal the simple reset button if the password entry fails
       document.getElementById('resetPassBtn').style.display = 'block';
     }
   }
 
-  // Simple automated password reset deployment strategy
   async function handleSimplePasswordReset() {
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
@@ -357,13 +372,11 @@
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
-      // 1. Commit fallback parameters to database node
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ password: defaultPass })
       });
 
-      // 2. Commit fallback parameter stream to Google Spreadsheet
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -371,7 +384,6 @@
         body: JSON.stringify({ action: "updatePassword", rowNumber: activeUserRecord.rowNumber, payload: { newPassword: defaultPass } })
       });
 
-      // 3. Sync memory caches locally
       activeUserRecord.password = defaultPass;
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = defaultPass;
@@ -450,7 +462,6 @@
       errorDiv.innerText = "Security records updated successfully!";
       document.getElementById('passwordInput').value = newPass;
       
-      // Keep cache updated if they reset then try to login later
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = newPass;
       }
@@ -473,26 +484,20 @@
     datesGrid.innerHTML = "";
     
     document.getElementById('allDoneMsg').style.display = 'none';
-    document.getElementById('addMoreDatesBtn').style.display = 'inline-block';
-
-    const saveBtn = document.getElementById('saveDatesBtn');
-    saveBtn.style.display = 'inline-block';
-
-    // Check our persistent global variable lock state
-    if (isSubmitDisabledAfterSave) {
-      saveBtn.disabled = true;
-      saveBtn.style.opacity = "0.5";
-      saveBtn.style.cursor = "not-allowed";
-    } else {
-      saveBtn.disabled = false;
-      saveBtn.style.opacity = "1";
-      saveBtn.style.cursor = "pointer";
-    }
 
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
-    // Build Read-Only Grid (Columns A, B, C)
+    // Apply header text dynamically from Sheet Column D
+    if (headers[3]) {
+      document.getElementById('statusLabel').innerText = headers[3];
+    }
+
+    // Set Saved Selection State for Dropdown (Index 3 corresponds to Column D)
+    let savedStatus = (rowValues[3] && rowValues[3].trim() !== "") ? rowValues[3].trim() : "Active";
+    document.getElementById('currentStatusSelect').value = savedStatus;
+
+    // Build Read-Only Grid (Columns A, B, C -> Indexes 0, 1, 2)
     for (let i = 0; i < 3; i++) {
       let rawVal = rowValues[i] ? rowValues[i] : "";
       let title = headers[i] ? headers[i] : ("Column " + String.fromCharCode(65 + i));
@@ -502,24 +507,27 @@
       readOnlyGrid.appendChild(div);
     }
 
-    // Build Interactive Smart Date Elements (Indexes 3 to 14)
+    // Determine lock conditions
+    let isStatusWithdrawn = (savedStatus !== "Active");
+
+    // Build Interactive Smart Date Elements (Columns E to P -> Indexes 4 to 15)
     let nextEmptyFound = false;
 
-    for (let i = 3; i <= 14; i++) {
+    for (let i = 4; i <= 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i].trim() : "";
-      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 2));
+      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 3));
 
       let div = document.createElement('div');
       div.className = 'grid-item';
 
       if (rawVal !== "") {
-        // EARLIER SUBMITTED DATE: Fully editable
+        // PREVIOUSLY ENTERED DATES: Rendered normally
         div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
         datesGrid.appendChild(div);
       } else {
-        // EMPTY SLOTS
-        // If the button is locked post-submit, hide ALL empty slots completely
-        if (!nextEmptyFound && !isSubmitDisabledAfterSave) {
+        // EMPTY SLOTS:
+        // Hide future blanks entirely if the profile status is non-active or the button is explicitly locked post-save
+        if (!nextEmptyFound && !isSubmitDisabledAfterSave && !isStatusWithdrawn) {
           div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
           datesGrid.appendChild(div);
           nextEmptyFound = true;
@@ -531,16 +539,65 @@
       }
     }
 
-    checkIfAllSlotsFilled();
+    // Run custom dynamic toggle updates to block inputs or configure correct button states
+    runDynamicStatusLockingRule();
+  }
+
+  // Pure state tracker validation logic function
+  function runDynamicStatusLockingRule() {
+    let selectedStatus = document.getElementById('currentStatusSelect').value;
+    let isNotActive = (selectedStatus !== "Active");
+    
+    let allDateInputs = document.querySelectorAll('#datesGrid .date-input');
+    const saveBtn = document.getElementById('saveDatesBtn');
+    const addMoreBtn = document.getElementById('addMoreDatesBtn');
+
+    if (isNotActive) {
+      // Rule implementation: freeze all date nodes if anything other than default "Active" is selected
+      allDateInputs.forEach(input => {
+        input.disabled = true;
+        input.style.backgroundColor = "#e9ecef";
+        input.style.cursor = "not-allowed";
+      });
+      
+      // Hide further input triggers
+      addMoreBtn.style.display = 'none';
+      
+      // Submit remains functional to upload the changed dropdown status
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = "1";
+      saveBtn.style.cursor = "pointer";
+    } else {
+      // Revert lock condition rules to editable mode
+      allDateInputs.forEach(input => {
+        input.disabled = false;
+        input.style.backgroundColor = "white";
+        input.style.cursor = "auto";
+      });
+
+      // Manage Submit Button configurations based on whether the action was freshly saved or not
+      if (isSubmitDisabledAfterSave) {
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = "0.5";
+        saveBtn.style.cursor = "not-allowed";
+      } else {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = "1";
+        saveBtn.style.cursor = "pointer";
+      }
+
+      checkIfAllSlotsFilled();
+    }
   }
     
   function checkIfAllSlotsFilled() {
+    let selectedStatus = document.getElementById('currentStatusSelect').value;
+    if (selectedStatus !== "Active") return; // Keep visibility rules frozen if non-active
+
     let currentHidden = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
-    // If no more hidden slots remain and all current active text inputs have value
     if (currentHidden.length === 0) {
       document.getElementById('addMoreDatesBtn').style.display = 'none';
       
-      // Let's check if absolutely every input has a value chosen
       let inputs = document.querySelectorAll('#datesGrid .date-input');
       let fullyPopulated = true;
       inputs.forEach(input => { if (input.value === "") fullyPopulated = false; });
@@ -548,16 +605,15 @@
       if (fullyPopulated) {
         document.getElementById('allDoneMsg').style.display = 'block';
       }
+    } else {
+      document.getElementById('addMoreDatesBtn').style.display = 'inline-block';
     }
   }
 
   function exposeNextEmptyDateSlot() {
     let hiddenSlots = document.querySelectorAll('#datesGrid .grid-item.hidden-slot');
     if (hiddenSlots.length > 0) {
-      // Release the global post-submit button lock entirely
       isSubmitDisabledAfterSave = false;
-
-      // Un-hide the very first available hidden slot
       hiddenSlots[0].classList.remove('hidden-slot');
       
       const saveBtn = document.getElementById('saveDatesBtn');
@@ -576,37 +632,49 @@
     statusSpan.innerText = "Writing instant records...";
     statusSpan.className = "status-msg";
     
+    // 1. Gather values from UI elements
+    let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
-    let updatedDatesPayload = [];
     
-    // Extrapolate values linearly sequentially
+    // 2. Map structural array payloads safely back to local cache model values
+    activeUserRecord.rowData[3] = selectedStatusValue; // Save Status at Column D Index 3
+
+    let updatedDatesPayload = [];
     dateInputs.forEach(input => {
       updatedDatesPayload.push(input.value.trim());
     });
 
-    for(let i=0; i<updatedDatesPayload.length; i++) {
-       activeUserRecord.rowData[i+3] = updatedDatesPayload[i];
+    // Dates map to payload array index starting at 4 (Column E)
+    for(let i = 0; i < updatedDatesPayload.length; i++) {
+       activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
     }
     
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
     try {
+      // Patch Realtime Database Node Engine
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
 
+      // Assemble payload to match your Google Sheet code logic
+      // Passing structural rows cleanly downstream
+      let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
+
       fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updateDates", rowNumber: activeUserRecord.rowNumber, payload: updatedDatesPayload })
+        body: JSON.stringify({ 
+          action: "updateDates", 
+          rowNumber: activeUserRecord.rowNumber, 
+          payload: combinedPayloadArray 
+        })
       });
 
       statusSpan.innerText = "Submitted!!";
-
-      // Set the permanent global variable lock to true
       isSubmitDisabledAfterSave = true;
       
       saveBtn.disabled = true;
@@ -625,7 +693,7 @@
   }
 
   function logout() {
-    isSubmitDisabledAfterSave = false; // Reset lock tracking state completely
+    isSubmitDisabledAfterSave = false; 
     activeUserRecord = null;
     selectedName = "";
     document.getElementById('nameInput').value = "";
