@@ -44,7 +44,7 @@
     .btn-danger:hover { background-color: #b31412; }
     
     .dashboard { display: none; }
-    .status-section { background: #f8f9fa; padding: 15px; border: 1px solid #dadce0; border-radius: 6px; margin-bottom: 25px; }
+    .status-section { background: #f8f9fa; padding: 15px; border: 1px solid #dadce0; border-radius: 4px; margin-bottom: 25px; }
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .grid-item { background: #f8f9fa; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
     .grid-item.hidden-slot { display: none; }
@@ -103,7 +103,7 @@
     <div id="readOnlyGrid" class="grid-view"></div>
 
     <div class="status-section">
-      <label for="currentStatusSelect" id="statusLabel" style="font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: block; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Current Status</label>
+      <label for="currentStatusSelect" style="font-weight: bold; color: #1a73e8; margin-bottom: 10px; display: block; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Current Status</label>
       <select id="currentStatusSelect">
         <option value="Active">Active</option>
         <option value="Sitting not started because Dr not responding">Sitting not started because Dr not responding</option>
@@ -487,11 +487,7 @@
     let rowValues = activeUserRecord.rowData;
     let headers = activeUserRecord.headers;
 
-    // Fixed Mapping: Sheet Column D is Index 3
-    if (headers[3]) {
-      document.getElementById('statusLabel').innerText = headers[3];
-    }
-
+    // Fixed Selection: Read status value safely from structural index 3 (Column D)
     let savedStatus = (rowValues[3] && rowValues[3].trim() !== "") ? rowValues[3].trim() : "Active";
     document.getElementById('currentStatusSelect').value = savedStatus;
 
@@ -508,10 +504,12 @@
     let isStatusWithdrawn = (savedStatus !== "Active");
     let nextEmptyFound = false;
 
-    // FIXED LOOP MAPPING: Dates are Indexes 4 to 15 (Columns E to P)
+    // FIXED LOOP MAPPING: Dates run from index 4 to 15 (Columns E to P)
     for (let i = 4; i <= 15; i++) {
       let rawVal = rowValues[i] ? rowValues[i].trim() : "";
-      let title = headers[i] ? headers[i] : ("Sitting Given Date #" + (i - 3)); // Fixed text offset label math!
+      
+      // Look up headers dynamically starting at index 4 for dates, fallback cleanly if empty
+      let title = (headers[i] && headers[i].trim() !== "") ? headers[i] : ("Sitting Given Date #" + (i - 3));
 
       let div = document.createElement('div');
       div.className = 'grid-item';
@@ -621,7 +619,6 @@
     let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     
-    // Save Status to local record cache at structural index 3 (Column D)
     activeUserRecord.rowData[3] = selectedStatusValue; 
 
     let updatedDatesPayload = [];
@@ -629,7 +626,6 @@
       updatedDatesPayload.push(input.value.trim());
     });
 
-    // Save Dates starting back at structural index 4 (Column E)
     for(let i = 0; i < updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
     }
@@ -643,8 +639,6 @@
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
 
-      // Crucial: The combined payload array puts Status first, followed by the dates. 
-      // This tells your Apps Script backend to map Status to Column D, and the dates to E, F, G, etc.
       let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
 
       fetch(googleScriptUrl, {
