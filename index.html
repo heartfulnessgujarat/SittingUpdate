@@ -163,6 +163,7 @@
 </div>
 
 <script>
+  // NOTE: If you changed your deployment web app URL in Apps Script Step 1, paste it here!
   const googleScriptUrl = "https://script.google.com/macros/s/AKfycbwJgkl9eGDh37UgxzdWPyDg6QLwoYgst8ums5Inkt7WKkx3FTbvAYOGppIHGo0a56E/exec"; 
   const firebaseDbUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users.json";
   const firebaseWaitlistUrl = "https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/waitlist.json";
@@ -329,7 +330,7 @@
     
     if (!activeUserRecord) return;
 
-    // CHANGED: Fixed reference index to read password from Column BA (Index 52)
+    // LOCKED ON INDEX 52 (COLUMN BA)
     let actualStoredPassword = activeUserRecord.password || activeUserRecord.rowData[52] || "";
 
     if (actualStoredPassword === inputPassword) {
@@ -355,7 +356,7 @@
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
 
-    // CHANGED: Write reset password configuration directly to index 52 (Column BA)
+    // LOCKED ON INDEX 52 (COLUMN BA)
     activeUserRecord.rowData[52] = defaultPass; 
 
     try {
@@ -408,7 +409,7 @@
     let confirmPass = document.getElementById('modalConfirmPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
-    // CHANGED: Read securely from Column BA (Index 52)
+    // LOCKED ON INDEX 52 (COLUMN BA)
     let currentActualPass = activeUserRecord.password || activeUserRecord.rowData[52] || "";
 
     if(!oldPass || !newPass || !confirmPass) {
@@ -436,7 +437,7 @@
     errorDiv.className = "status-msg";
 
     activeUserRecord.password = newPass;
-    // CHANGED: Update mapping tracking inside local data array at index 52
+    // LOCKED ON INDEX 52 (COLUMN BA)
     activeUserRecord.rowData[52] = newPass;
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users/${nodeKey}.json`;
