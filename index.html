@@ -119,7 +119,7 @@
       <button class="btn-secondary" id="logoutBtn">Logout</button>
       <span id="saveStatus" class="status-msg"></span>
     </div>
-    <div id="allDoneMsg" style="display: none; margin-top: 15px; padding: 12px; background-color: #e8f0fe; color: #1a73e8; border-radius: 4px; font-weight: 600; text-align: center;">All 12 Sitting Given Date records have been completed.</div>
+    <div id="allDoneMsg" style="display: none; margin-top: 15px; padding: 12px; background-color: #e8f0fe; color: #1a73e8; border-radius: 4px; font-weight: 600; text-align: center;">All 32 Sitting Given Date records have been completed.</div>
   </div>
 </div>
 
@@ -504,29 +504,38 @@
     let isStatusWithdrawn = (savedStatus !== "Active");
     let nextEmptyFound = false;
 
-    for (let i = 4; i <= 15; i++) {
-      let rawVal = rowValues[i] ? rowValues[i].trim() : "";
-      let title = (headers[i] && headers[i].trim() !== "") ? headers[i] : ("Sitting Given Date #" + (i - 3));
 
-      let div = document.createElement('div');
-      div.className = 'grid-item';
 
-      if (rawVal !== "") {
-        div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
-        datesGrid.appendChild(div);
-      } else {
-        if (!nextEmptyFound && !isSubmitDisabledAfterSave && !isStatusWithdrawn) {
-          div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
-          datesGrid.appendChild(div);
-          nextEmptyFound = true;
-        } else {
-          div.className = 'grid-item hidden-slot';
-          div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
-          datesGrid.appendChild(div);
-        }
-      }
+
+
+// UPDATED: Changed loop range from 4-15 to 4-35 to map out all 32 date inputs
+for (let i = 4; i <= 35; i++) {
+  let rawVal = rowValues[i] ? rowValues[i].trim() : "";
+  let title = (headers[i] && headers[i].trim() !== "") ? headers[i] : ("Sitting Given Date #" + (i - 3));
+
+  let div = document.createElement('div');
+  div.className = 'grid-item';
+
+  if (rawVal !== "") {
+    div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="${rawVal}">`;
+    datesGrid.appendChild(div);
+  } else {
+    if (!nextEmptyFound && !isSubmitDisabledAfterSave && !isStatusWithdrawn) {
+      div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
+      datesGrid.appendChild(div);
+      nextEmptyFound = true;
+    } else {
+      div.className = 'grid-item hidden-slot';
+      div.innerHTML = `<span>${title}</span><input type="date" class="date-input" max="${getTodayDateString()}" value="">`;
+      datesGrid.appendChild(div);
     }
+  }
+}
 
+
+
+
+    
     runDynamicStatusLockingRule();
   }
 
