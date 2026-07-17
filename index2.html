@@ -169,7 +169,13 @@
     document.getElementById('clearScreenBtn').addEventListener('click', resetSearchScreen);
     document.getElementById('loginBtn').addEventListener('click', processLogin);
     document.getElementById('changePassBtn').addEventListener('click', openPasswordModal);
-    document.getElementById('closeModalBtn').addEventListener('click', closePasswordModal);
+ 
+
+document.getElementById('closeModalBtn').addEventListener('click', () => {
+  document.getElementById('passwordModal').style.display = "none";
+});
+
+    
     document.getElementById('submitNewPassBtn').addEventListener('click', submitPasswordChange);
     document.getElementById('saveDatesBtn').addEventListener('click', submitDates);
     document.getElementById('addMoreDatesBtn').addEventListener('click', exposeNextEmptyDateSlot);
