@@ -322,7 +322,9 @@ function processLogin() {
   }
 
 
-async function handleSimplePasswordReset() {
+
+
+  async function handleSimplePasswordReset() {
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
     msgDiv.innerText = "Resetting password key...";
@@ -335,7 +337,7 @@ async function handleSimplePasswordReset() {
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: defaultPass }) // FIX: Update only the password property
+        body: JSON.stringify({ password: defaultPass })
       });
       fetch(googleScriptUrl, {
         method: "POST",
@@ -360,8 +362,6 @@ async function handleSimplePasswordReset() {
     }
   }
 
- 
-
   function openPasswordModal() {
     document.getElementById('modalOldPass').value = "";
     document.getElementById('modalNewPass').value = "";
@@ -375,13 +375,16 @@ async function handleSimplePasswordReset() {
   }
 
 
-  async function submitPasswordChange() {
+
+
+
+async function submitPasswordChange() {
     let oldPass = document.getElementById('modalOldPass').value.trim();
     let newPass = document.getElementById('modalNewPass').value.trim();
     let confirmPass = document.getElementById('modalConfirmPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
-    let currentActualPass = activeUserRecord.password || ""; // FIX
+    let currentActualPass = activeUserRecord.password || ""; 
     if(!oldPass || !newPass || !confirmPass) {
       errorDiv.innerText = "Please complete all password fields.";
       errorDiv.className = "status-msg error";
@@ -411,7 +414,7 @@ async function handleSimplePasswordReset() {
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: newPass }) // FIX: Update only the password property
+        body: JSON.stringify({ password: newPass })
       });
       fetch(googleScriptUrl, {
         method: "POST",
@@ -434,9 +437,7 @@ async function handleSimplePasswordReset() {
       errorDiv.innerText = "Sync configuration conflict.";
       errorDiv.className = "status-msg error";
     }
-  }
-
-  
+  }  
   function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
