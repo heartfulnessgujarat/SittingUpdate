@@ -302,12 +302,14 @@
     activeUserRecord = null;
     selectedName = "";
   }
-  function processLogin() {
+
+function processLogin() {
     let inputPassword = document.getElementById('passwordInput').value.trim();
     let msgDiv = document.getElementById('loginMessage');
     
     if (!activeUserRecord) return;
-    let actualStoredPassword = activeUserRecord.password || activeUserRecord.rowData[54] || "";
+    // FIX: Fallback to empty string if both properties are missing
+    let actualStoredPassword = activeUserRecord.password || "";
     if (actualStoredPassword === inputPassword) {
       msgDiv.innerText = "";
       document.getElementById('resetPassBtn').style.display = 'none';
@@ -318,6 +320,9 @@
       document.getElementById('resetPassBtn').style.display = 'block';
     }
   }
+
+
+
   async function handleSimplePasswordReset() {
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
