@@ -589,16 +589,21 @@ async function submitDates() {
       statusSpan.className = "status-msg error";
       return; 
     }
+
+
+
+// 2. Update the local active profile record indices correctly
+    activeUserRecord.rowData[4] = selectedStatusValue; // Column E (Index 4)
     
-    // 2. Update the local active profile record indices
-    activeUserRecord.rowData[3] = selectedStatusValue; 
     let updatedDatesPayload = [];
     dateInputs.forEach(input => { updatedDatesPayload.push(input.value.trim()); });
     
+    // Save dates starting exactly at Column F (Index 5)
     for(let i = 0; i < updatedDatesPayload.length; i++) {
-       activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
+       activeUserRecord.rowData[i + 5] = updatedDatesPayload[i];
     }
-    
+
+  
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
     
