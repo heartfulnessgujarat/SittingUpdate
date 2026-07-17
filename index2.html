@@ -564,77 +564,85 @@ async function submitPasswordChange() {
     }
   }
 
-async function submitDates() {
-    let dateInputs = document.querySelectorAll('[id^="sittingDateInput_"]');
-    let selectedDates = [];
 
-    // 1. Collect only non-empty dates for the duplicate check
+async function submitDates() {
+    let statusSpan = document.getElementById('saveStatus');
+    const saveBtn = document.getElementById('saveDatesBtn');
+    
+    // Clear styles from any previous errors
+    statusSpan.className = "status-msg";
+    statusSpan.innerText = "Writing records...";
+    
+    let selectedStatusValue = document.getElementById('currentStatusSelect').value;
+    let dateInputs = document.querySelectorAll('#datesGrid .date-input');
+    
+    // 1. DUPLICATE CHECK INTERLOCK (Round 1 Style - displays at the bottom)
+    let selectedDates = [];
+    let hasDuplicates = false;
+    
     dateInputs.forEach(input => {
       let val = input.value.trim();
-      if (val) {
+      if (val !== "") {
         selectedDates.push(val);
       }
     });
-
-    // 2. Duplicate Check Interlock
+    
     let uniqueDates = new Set(selectedDates);
     if (uniqueDates.size !== selectedDates.length) {
-      alert("Validation Error: You cannot select the same date more than once. Please correct the duplicate dates.");
-      return; 
+      statusSpan.innerText = "Validation Error: You cannot select the same date more than once.";
+      statusSpan.className = "status-msg error";
+      return; // Stop form submission entirely
     }
-
-    let submitBtn = document.getElementById('saveDatesBtn');
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Saving...";
-
-    let statusValue = document.getElementById('currentStatusSelect').value;
     
-    // 3. FIX: Start with a copy of your existing 37-column rowData array
-    // This preserves Index 0 (First Name), Index 1 (Last Name), Index 2 (Mobile), etc.
-    let payload = [...activeUserRecord.rowData];
-
-    // Update Status at Index 4 (Column E)
-    payload[4] = statusValue; 
-
-    // Update dates starting from Index 5 (Column F) onwards
-    dateInputs.forEach((input, index) => {
-      payload[5 + index] = input.value.trim();
-    });
-
+    // 2. Map data exactly to Round 1 Array Indices
+    // Update local data and Firebase rowData reference cache at index 3 (Column D)
+    activeUserRecord.rowData[3] = selectedStatusValue; 
+    let updatedDatesPayload = [];
+    dateInputs.forEach(input => { updatedDatesPayload.push(input.value.trim()); });
+    
+    // Dates start explicitly at index 4 (Column E)
+    for(let i = 0; i < updatedDatesPayload.length; i++) {
+       activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
+    }
+    
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
-
+    
     try {
-      // Update Firebase RTDB
+      // Save directly to the users2 branch matching your Round 2 endpoint
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ rowData: payload })
+        body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
-
-      // Update Google Sheet via Apps Script Web App
-      await fetch(googleScriptUrl, {
+      
+      // Construct a unified list array: [status, date1, date2, ...]
+      let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
+      fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "updateDates",
-          rowNumber: activeUserRecord.rowNumber,
-          payload: payload.slice(4) // Sends only Status and Dates to Apps Script logic
+        body: JSON.stringify({ 
+          action: "updateDates", 
+          rowNumber: activeUserRecord.rowNumber, 
+          payload: combinedPayloadArray 
         })
       });
-
-      // Update local cache
-      activeUserRecord.rowData = payload;
-      if (allUsersCache && allUsersCache[nodeKey]) {
-        allUsersCache[nodeKey].rowData = payload;
+      
+      statusSpan.innerText = "Submitted Successfully!!";
+      
+      if (selectedStatusValue !== "Active") {
+        isSubmitDisabledAfterSave = true;
       }
-
-      alert("Data updated successfully!");
-      buildDashboard(); 
-    } catch (err) {
-      alert("Error saving data. Please check connection and try again.");
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Submit";
+      
+      // Rebuild the dashboard cleanly after 1.5 seconds without displacing items
+      setTimeout(() => { 
+        buildDashboard(); 
+        statusSpan.innerText = ""; 
+      }, 1500);
+      
+    } catch(err) {
+      statusSpan.innerText = "Database sync failed.";
+      statusSpan.className = "status-msg error";
     }
   }
 
