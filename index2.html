@@ -564,22 +564,18 @@ async function submitPasswordChange() {
     }
   }
 
-
 async function submitDates() {
     let statusSpan = document.getElementById('saveStatus');
     const saveBtn = document.getElementById('saveDatesBtn');
     
-    // Clear styles from any previous errors
     statusSpan.className = "status-msg";
     statusSpan.innerText = "Writing records...";
     
     let selectedStatusValue = document.getElementById('currentStatusSelect').value;
     let dateInputs = document.querySelectorAll('#datesGrid .date-input');
     
-    // 1. DUPLICATE CHECK INTERLOCK (Round 1 Style - displays at the bottom)
+    // 1. Duplicate check interlock
     let selectedDates = [];
-    let hasDuplicates = false;
-    
     dateInputs.forEach(input => {
       let val = input.value.trim();
       if (val !== "") {
@@ -591,16 +587,14 @@ async function submitDates() {
     if (uniqueDates.size !== selectedDates.length) {
       statusSpan.innerText = "Validation Error: You cannot select the same date more than once.";
       statusSpan.className = "status-msg error";
-      return; // Stop form submission entirely
+      return; 
     }
     
-    // 2. Map data exactly to Round 1 Array Indices
-    // Update local data and Firebase rowData reference cache at index 3 (Column D)
+    // 2. Update the local active profile record indices
     activeUserRecord.rowData[3] = selectedStatusValue; 
     let updatedDatesPayload = [];
     dateInputs.forEach(input => { updatedDatesPayload.push(input.value.trim()); });
     
-    // Dates start explicitly at index 4 (Column E)
     for(let i = 0; i < updatedDatesPayload.length; i++) {
        activeUserRecord.rowData[i + 4] = updatedDatesPayload[i];
     }
@@ -609,13 +603,13 @@ async function submitDates() {
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
     
     try {
-      // Save directly to the users2 branch matching your Round 2 endpoint
+      // Save directly to the database
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: activeUserRecord.rowData })
       });
       
-      // Construct a unified list array: [status, date1, date2, ...]
+      // Send updates to the spreadsheet via web app
       let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
       fetch(googleScriptUrl, {
         method: "POST",
@@ -634,7 +628,12 @@ async function submitDates() {
         isSubmitDisabledAfterSave = true;
       }
       
-      // Rebuild the dashboard cleanly after 1.5 seconds without displacing items
+      // 3. FIX: Safely sync the global cache to preserve layout structure
+      if (allUsersCache && allUsersCache[nodeKey]) {
+        allUsersCache[nodeKey].rowData = [...activeUserRecord.rowData];
+      }
+      
+      // Rebuild the interface cleanly using verified data structures
       setTimeout(() => { 
         buildDashboard(); 
         statusSpan.innerText = ""; 
@@ -645,8 +644,6 @@ async function submitDates() {
       statusSpan.className = "status-msg error";
     }
   }
-
-
   
   function logout() {
     isSubmitDisabledAfterSave = false; 
