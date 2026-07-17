@@ -373,13 +373,15 @@ async function handleSimplePasswordReset() {
   function closeModalBtn() {
     document.getElementById('passwordModal').style.display = "none";
   }
+
+
   async function submitPasswordChange() {
     let oldPass = document.getElementById('modalOldPass').value.trim();
     let newPass = document.getElementById('modalNewPass').value.trim();
     let confirmPass = document.getElementById('modalConfirmPass').value.trim();
     let errorDiv = document.getElementById('modalError');
     
-    let currentActualPass = activeUserRecord.password || activeUserRecord.rowData[54] || "";
+    let currentActualPass = activeUserRecord.password || ""; // FIX
     if(!oldPass || !newPass || !confirmPass) {
       errorDiv.innerText = "Please complete all password fields.";
       errorDiv.className = "status-msg error";
@@ -404,13 +406,12 @@ async function handleSimplePasswordReset() {
     errorDiv.innerText = "Updating records...";
     errorDiv.className = "status-msg";
     activeUserRecord.password = newPass;
-    activeUserRecord.rowData[54] = newPass;
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: newPass, rowData: activeUserRecord.rowData })
+        body: JSON.stringify({ password: newPass }) // FIX: Update only the password property
       });
       fetch(googleScriptUrl, {
         method: "POST",
@@ -427,7 +428,6 @@ async function handleSimplePasswordReset() {
       
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = newPass;
-        allUsersCache[nodeKey].rowData[54] = newPass;
       }
       setTimeout(() => { document.getElementById('passwordModal').style.display = "none"; }, 1200);
     } catch(e) {
@@ -435,6 +435,8 @@ async function handleSimplePasswordReset() {
       errorDiv.className = "status-msg error";
     }
   }
+
+  
   function buildDashboard() {
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('dashboardSection').style.display = 'block';
