@@ -563,53 +563,84 @@ async function submitPasswordChange() {
       checkIfAllSlotsFilled();
     }
   }
-  async function submitDates() {
-    let statusSpan = document.getElementById('saveStatus');
-    const saveBtn = document.getElementById('saveDatesBtn');
-    statusSpan.innerText = "Writing records...";
-    
-    let selectedStatusValue = document.getElementById('currentStatusSelect').value;
-    let dateInputs = document.querySelectorAll('#datesGrid .date-input');
-    
-    // Status is updated at index 4 (Column E)
-    activeUserRecord.rowData[4] = selectedStatusValue; 
-    let updatedDatesPayload = [];
-    dateInputs.forEach(input => { updatedDatesPayload.push(input.value.trim()); });
-    
-    // Date inputs start writing back at index 5 (Column F)
-    for(let i = 0; i < updatedDatesPayload.length; i++) {
-       activeUserRecord.rowData[i + 5] = updatedDatesPayload[i];
+
+
+async function submitDates() {
+    // 1. Gather all the date input elements
+    let dateInputs = document.querySelectorAll('[id^="sittingDateInput_"]');
+    let selectedDates = [];
+    let hasDuplicates = false;
+
+    // 2. Collect only the non-empty date values
+    dateInputs.forEach(input => {
+      let val = input.value.trim();
+      if (val) {
+        selectedDates.push(val);
+      }
+    });
+
+    // 3. INTERLOCK: Check if there are any duplicate values in our list
+    let uniqueDates = new Set(selectedDates);
+    if (uniqueDates.size !== selectedDates.length) {
+      alert("Validation Error: You cannot select the same date more than once. Please correct the duplicate dates.");
+      return; // Blocks form submission
     }
+
+    // --- Proceed with your existing submission logic below ---
+    let submitBtn = document.getElementById('saveDatesBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Saving...";
+
+    let statusValue = document.getElementById('currentStatusSelect').value;
     
+    // Construct payload array: Status first, followed by all date values (including empty ones for blanking)
+    let payload = [statusValue];
+    dateInputs.forEach(input => {
+      payload.push(input.value.trim()); 
+    });
+
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
+
     try {
+      // Update Firebase RTDB first
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ rowData: activeUserRecord.rowData })
+        body: JSON.stringify({ rowData: payload })
       });
-      let combinedPayloadArray = [selectedStatusValue, ...updatedDatesPayload];
-      fetch(googleScriptUrl, {
+
+      // Update Google Sheet via Apps Script Web App
+      await fetch(googleScriptUrl, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "updateDates", 
-          rowNumber: activeUserRecord.rowNumber, 
-          payload: combinedPayloadArray 
+        body: JSON.stringify({
+          action: "updateDates",
+          rowNumber: activeUserRecord.rowNumber,
+          payload: payload
         })
       });
-      statusSpan.innerText = "Submitted Successfully!!";
-      
-      if (selectedStatusValue !== "Active") {
-        isSubmitDisabledAfterSave = true;
+
+      // Update local cache
+      activeUserRecord.rowData = payload;
+      if (allUsersCache && allUsersCache[nodeKey]) {
+        allUsersCache[nodeKey].rowData = payload;
       }
-      setTimeout(() => { buildDashboard(); statusSpan.innerText = ""; }, 1500);
-    } catch(err) {
-      statusSpan.innerText = "Database sync failed.";
-      statusSpan.className = "status-msg error";
+
+      alert("Data updated successfully!");
+      buildDashboard(); // Rebuild UI to reflect changes
+    } catch (err) {
+      alert("Error saving data. Please check connection and try again.");
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Submit";
     }
   }
+
+
+
+
+
+  
   function logout() {
     isSubmitDisabledAfterSave = false; 
     activeUserRecord = null;
