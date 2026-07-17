@@ -322,8 +322,7 @@ function processLogin() {
   }
 
 
-
-  async function handleSimplePasswordReset() {
+async function handleSimplePasswordReset() {
     let msgDiv = document.getElementById('loginMessage');
     if (!activeUserRecord) return;
     msgDiv.innerText = "Resetting password key...";
@@ -332,11 +331,11 @@ function processLogin() {
     const defaultPass = "123456";
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
-    activeUserRecord.rowData[54] = defaultPass; 
+    
     try {
       await fetch(patchUrl, {
         method: "PATCH",
-        body: JSON.stringify({ password: defaultPass, rowData: activeUserRecord.rowData })
+        body: JSON.stringify({ password: defaultPass }) // FIX: Update only the password property
       });
       fetch(googleScriptUrl, {
         method: "POST",
@@ -351,7 +350,6 @@ function processLogin() {
       activeUserRecord.password = defaultPass;
       if (allUsersCache && allUsersCache[nodeKey]) {
         allUsersCache[nodeKey].password = defaultPass;
-        allUsersCache[nodeKey].rowData[54] = defaultPass;
       }
       msgDiv.innerText = "Password successfully reset to 123456! You can login now.";
       document.getElementById('passwordInput').value = defaultPass;
@@ -361,6 +359,11 @@ function processLogin() {
       document.getElementById('resetPassBtn').style.display = 'block';
     }
   }
+
+
+
+  
+
   function openPasswordModal() {
     document.getElementById('modalOldPass').value = "";
     document.getElementById('modalNewPass').value = "";
