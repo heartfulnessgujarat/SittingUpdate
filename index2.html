@@ -564,14 +564,11 @@ async function submitPasswordChange() {
     }
   }
 
-
 async function submitDates() {
-    // 1. Gather all the date input elements
     let dateInputs = document.querySelectorAll('[id^="sittingDateInput_"]');
     let selectedDates = [];
-    let hasDuplicates = false;
 
-    // 2. Collect only the non-empty date values
+    // 1. Collect only non-empty dates for the duplicate check
     dateInputs.forEach(input => {
       let val = input.value.trim();
       if (val) {
@@ -579,31 +576,36 @@ async function submitDates() {
       }
     });
 
-    // 3. INTERLOCK: Check if there are any duplicate values in our list
+    // 2. Duplicate Check Interlock
     let uniqueDates = new Set(selectedDates);
     if (uniqueDates.size !== selectedDates.length) {
       alert("Validation Error: You cannot select the same date more than once. Please correct the duplicate dates.");
-      return; // Blocks form submission
+      return; 
     }
 
-    // --- Proceed with your existing submission logic below ---
     let submitBtn = document.getElementById('saveDatesBtn');
     submitBtn.disabled = true;
     submitBtn.innerText = "Saving...";
 
     let statusValue = document.getElementById('currentStatusSelect').value;
     
-    // Construct payload array: Status first, followed by all date values (including empty ones for blanking)
-    let payload = [statusValue];
-    dateInputs.forEach(input => {
-      payload.push(input.value.trim()); 
+    // 3. FIX: Start with a copy of your existing 37-column rowData array
+    // This preserves Index 0 (First Name), Index 1 (Last Name), Index 2 (Mobile), etc.
+    let payload = [...activeUserRecord.rowData];
+
+    // Update Status at Index 4 (Column E)
+    payload[4] = statusValue; 
+
+    // Update dates starting from Index 5 (Column F) onwards
+    dateInputs.forEach((input, index) => {
+      payload[5 + index] = input.value.trim();
     });
 
     let nodeKey = "row_" + activeUserRecord.rowNumber;
     let patchUrl = `https://sittingupdatesystem-default-rtdb.asia-southeast1.firebasedatabase.app/users2/${nodeKey}.json`;
 
     try {
-      // Update Firebase RTDB first
+      // Update Firebase RTDB
       await fetch(patchUrl, {
         method: "PATCH",
         body: JSON.stringify({ rowData: payload })
@@ -617,7 +619,7 @@ async function submitDates() {
         body: JSON.stringify({
           action: "updateDates",
           rowNumber: activeUserRecord.rowNumber,
-          payload: payload
+          payload: payload.slice(4) // Sends only Status and Dates to Apps Script logic
         })
       });
 
@@ -628,16 +630,13 @@ async function submitDates() {
       }
 
       alert("Data updated successfully!");
-      buildDashboard(); // Rebuild UI to reflect changes
+      buildDashboard(); 
     } catch (err) {
       alert("Error saving data. Please check connection and try again.");
       submitBtn.disabled = false;
       submitBtn.innerText = "Submit";
     }
   }
-
-
-
 
 
   
