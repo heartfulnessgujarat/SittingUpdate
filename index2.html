@@ -152,6 +152,45 @@
   </div>
 </div>
 <script>
+
+
+  // ==========================================
+  // PROJECT STATUS SWITCH
+  // Set to 'true' to open the portal again.
+  // Set to 'false' to lock the portal with the closing message.
+  // ==========================================
+  const isProjectActive = false; 
+
+  if (!isProjectActive) {
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelector('.container').innerHTML = `
+        <div style="text-align: center; padding: 20px 10px;">
+          <div style="font-size: 50px; color: #1a73e8; margin-bottom: 20px;">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h2 style="color: #1a73e8; margin-top: 0; margin-bottom: 15px; line-height: 1.3;">
+            Physician Wellness Research Study Program<br>Group #2
+          </h2>
+          <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+          <p style="font-size: 18px; color: #5f6368; line-height: 1.6; margin: 0; font-weight: 500;">
+            This project is over.... Kindly contact Br. Vinay Chavda for further assistance.
+          </p>
+        </div>
+      `;
+    });
+  }
+
+  // ... (leave all your existing JavaScript code below this line) ...
+
+
+
+
+
+
+
+
+
+  
   // PASTE YOUR NEW APP SCRIPT DEPLOYMENT URL HERE:
   const googleScriptUrl = "https://script.google.com/macros/s/AKfycbx22vewWSrl3t6eQyQnLfWMgi6OuuctUnY77UyZoZ74zzCwHIkY0zrnRdyI5WG4qC0AAg/exec"; 
   
